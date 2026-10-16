@@ -25,6 +25,7 @@ const api: CouchkitApi = {
   listLog: () => ipcRenderer.invoke('log:list'),
   sendKey: (key) => ipcRenderer.invoke('remote:key', key),
   sendText: (text) => ipcRenderer.invoke('remote:text', text),
+  isElevated: () => ipcRenderer.invoke('app:elevated'),
   listApps: () => ipcRenderer.invoke('apps:list'),
   pickApks: () => ipcRenderer.invoke('apps:pick'),
   pathForFile: (file) => webUtils.getPathForFile(file),

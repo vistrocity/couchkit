@@ -4,7 +4,7 @@ import { basename, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
 import { AdbClient } from './adb/client'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
-import type { LogSink } from './adb/runner'
+import { runCommand, type LogSink } from './adb/runner'
 import { platform } from './platform'
 import { ActivityLog } from './store/activity-log'
 import { HistoryStore, removeEntry, renameEntry, upsertConnection } from './store/history'
@@ -56,6 +56,12 @@ export function registerIpc(): void {
   })
 
   ipcMain.handle('app:info', (): AppInfo => platform.appInfo())
+
+  // `fltmc` only succeeds when run as Administrator, which makes it a simple check.
+  ipcMain.handle('app:elevated', async (): Promise<boolean> => {
+    if (!platform.isWindows) return false
+    return (await runCommand('fltmc', [], { timeoutMs: 5_000 })).ok
+  })
 
   ipcMain.handle('adb:check', (): Promise<AdbStatus> => checkAdb(locateAdb(), sink))
 

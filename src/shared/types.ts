@@ -159,6 +159,9 @@ export interface CouchkitApi {
   /** Type text into the field that is focused on the TV. */
   sendText(text: string): Promise<ActionResult>
 
+  /** True if Couchkit was started as Administrator on Windows (this blocks drag and drop from Explorer). */
+  isElevated(): Promise<boolean>
+
   listApps(): Promise<ListAppsResult>
   /** Opens the system file picker for APK files. Returns the chosen paths (empty if cancelled). */
   pickApks(): Promise<string[]>

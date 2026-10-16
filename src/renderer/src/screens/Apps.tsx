@@ -21,6 +21,7 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
   const [confirm, setConfirm] = useState<string | null>(null)
   const [notice, setNotice] = useState<ActionResult | null>(null)
   const [busyPackage, setBusyPackage] = useState<string | null>(null)
+  const [elevated, setElevated] = useState(false)
 
   const refresh = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -39,6 +40,10 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
   }, [connected, refresh])
 
   useEffect(() => window.couchkit.onApkProgress(setInstalling), [])
+
+  useEffect(() => {
+    void window.couchkit.isElevated().then(setElevated)
+  }, [])
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -119,6 +124,15 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
       onDrop={onDrop}
     >
       <h2>Apps</h2>
+
+      {elevated && (
+        <div className="card error" role="alert">
+          <p>
+            <strong>Couchkit is running as Administrator, so Windows blocks dragging files into it.</strong>
+          </p>
+          <p>Close Couchkit and start it again from a normal PowerShell window (not &quot;Run as administrator&quot;).</p>
+        </div>
+      )}
 
       <div className={dragging ? 'dropzone dragging' : 'dropzone'}>
         <p>

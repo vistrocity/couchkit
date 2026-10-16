@@ -7,6 +7,7 @@ export const KEYCODES: Record<RemoteKey, string> = {
   left: 'KEYCODE_DPAD_LEFT',
   right: 'KEYCODE_DPAD_RIGHT',
   ok: 'KEYCODE_DPAD_CENTER',
+  enter: 'KEYCODE_ENTER',
   back: 'KEYCODE_BACK',
   home: 'KEYCODE_HOME',
   menu: 'KEYCODE_MENU',

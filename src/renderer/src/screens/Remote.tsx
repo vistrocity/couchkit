@@ -27,6 +27,7 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
   const [text, setText] = useState('')
   const [sent, setSent] = useState(false)
   const [confirmPower, setConfirmPower] = useState(false)
+  const [pressEnter, setPressEnter] = useState(true)
 
   const press = useCallback(async (key: string): Promise<void> => {
     const result = await window.couchkit.sendKey(key)
@@ -69,6 +70,11 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
     event.preventDefault()
     const result = await window.couchkit.sendText(text)
     setFailure(result.ok ? null : result)
+    if (result.ok && pressEnter) {
+      // Many TV apps (a search box, for example) only act once Enter is pressed.
+      const enter = await window.couchkit.sendKey('enter')
+      if (!enter.ok) setFailure(enter)
+    }
     if (result.ok) {
       setText('')
       setSent(true)
@@ -171,7 +177,7 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
         <form className="card text-form" onSubmit={(e) => void sendText(e)}>
           <h3>Type on the TV</h3>
           <p className="muted small">
-            First select a text box on the TV (a search field, for example), then type here. Letters, numbers and common
+            First select a text box on the TV (a search field, for example), then type here and press Send. Letters, numbers and common
             symbols only.
           </p>
           <div className="row">
@@ -182,8 +188,15 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
             <button type="submit" className="primary" disabled={text === ''}>
               Send
             </button>
+            <button type="button" title="Press Enter on the TV (submit a search)" onClick={() => void press('enter')}>
+              Enter ↵
+            </button>
             {sent && <span className="ok">Sent ✓</span>}
           </div>
+          <label className="check small">
+            <input type="checkbox" checked={pressEnter} onChange={(e) => setPressEnter(e.target.checked)} /> Press Enter on the TV
+            after sending (starts the search)
+          </label>
         </form>
       </div>
     </>

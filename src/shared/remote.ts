@@ -7,6 +7,7 @@ export const REMOTE_KEY_IDS = [
   'left',
   'right',
   'ok',
+  'enter',
   'back',
   'home',
   'menu',

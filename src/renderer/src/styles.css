@@ -196,3 +196,6 @@ select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid 
 .card.app { display: flex; gap: 12px; align-items: center; margin-top: 8px; padding: 10px 14px; }
 
 .apps-page { min-height: 100%; }
+
+.check { display: flex; gap: 8px; align-items: center; margin-top: 10px; color: var(--muted); }
+.check input { width: auto; }
