@@ -8,35 +8,6 @@ interface Props {
 
 type Failure = Extract<ActionResult, { ok: false }>
 
-interface Button {
-  key: string
-  label: string
-  title: string
-}
-
-const DPAD: Button[][] = [
-  [{ key: 'up', label: '▲', title: 'Up' }],
-  [
-    { key: 'left', label: '◀', title: 'Left' },
-    { key: 'ok', label: 'OK', title: 'OK / Select' },
-    { key: 'right', label: '▶', title: 'Right' }
-  ],
-  [{ key: 'down', label: '▼', title: 'Down' }]
-]
-
-const NAV_BUTTONS: Button[] = [
-  { key: 'back', label: 'Back', title: 'Back' },
-  { key: 'home', label: 'Home', title: 'Home' },
-  { key: 'menu', label: 'Menu', title: 'Menu' }
-]
-
-const MEDIA_BUTTONS: Button[] = [
-  { key: 'playPause', label: '⏯', title: 'Play / Pause' },
-  { key: 'volumeDown', label: 'Vol −', title: 'Volume down' },
-  { key: 'volumeUp', label: 'Vol +', title: 'Volume up' },
-  { key: 'mute', label: 'Mute', title: 'Mute' }
-]
-
 /** Keyboard keys that act like the remote while the Remote page is open and no text box is focused. */
 const KEYBOARD: Record<string, string> = {
   ArrowUp: 'up',
@@ -105,9 +76,16 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
     }
   }
 
-  const renderButton = (b: Button): JSX.Element => (
-    <button key={b.key} type="button" className={b.key === 'ok' ? 'primary remote-btn' : 'remote-btn'} title={b.title} aria-label={b.title} onClick={() => void press(b.key)}>
-      {b.label}
+  const btn = (key: string, label: string, title: string, extra = ''): JSX.Element => (
+    <button
+      key={key}
+      type="button"
+      className={`rbtn ${extra}`.trim()}
+      title={title}
+      aria-label={title}
+      onClick={() => void press(key)}
+    >
+      {label}
     </button>
   )
 
@@ -115,8 +93,8 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
     <>
       <h2>Remote</h2>
       <p className="muted">
-        Click the buttons, or use the keyboard: arrow keys, <kbd>Enter</kbd> = OK, <kbd>Esc</kbd> = Back, <kbd>H</kbd> = Home,{' '}
-        <kbd>M</kbd> = Menu, <kbd>Space</kbd> = Play/Pause.
+        Click the buttons, or use the keyboard: arrow keys, <kbd>Enter</kbd> = OK, <kbd>Esc</kbd> = Back, <kbd>H</kbd> =
+        Home, <kbd>M</kbd> = Menu, <kbd>Space</kbd> = Play/Pause.
       </p>
 
       {failure !== null && (
@@ -134,59 +112,80 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
         </div>
       )}
 
-      <div className="remote">
-        <div className="dpad">
-          {DPAD.map((row, i) => (
-            <div key={i} className="dpad-row">
-              {row.map(renderButton)}
-            </div>
-          ))}
-        </div>
-        <div className="row">{NAV_BUTTONS.map(renderButton)}</div>
-        <div className="row">{MEDIA_BUTTONS.map(renderButton)}</div>
-        <div className="row">
-          {confirmPower ? (
-            <>
-              <span>Turn the TV on or off?</span>
-              <button
-                type="button"
-                className="primary"
-                onClick={() => {
-                  setConfirmPower(false)
-                  void press('power')
-                }}
-              >
-                Yes, send Power
+      <div className="remote-layout">
+        <section className="remote-body" aria-label="Remote control">
+          <div className="power-row">
+            {confirmPower ? (
+              <div className="row">
+                <span className="small">Turn the TV on or off?</span>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={() => {
+                    setConfirmPower(false)
+                    void press('power')
+                  }}
+                >
+                  Yes
+                </button>
+                <button type="button" onClick={() => setConfirmPower(false)}>
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button type="button" className="rbtn power" title="Power" aria-label="Power" onClick={() => setConfirmPower(true)}>
+                ⏻
               </button>
-              <button type="button" onClick={() => setConfirmPower(false)}>
-                Cancel
-              </button>
-            </>
-          ) : (
-            <button type="button" className="remote-btn" onClick={() => setConfirmPower(true)}>
-              Power
-            </button>
-          )}
-        </div>
-      </div>
+            )}
+          </div>
 
-      <form className="card text-form" onSubmit={(e) => void sendText(e)}>
-        <h3>Type on the TV</h3>
-        <p className="muted small">
-          First select a text box on the TV (a search field, for example), then type here. Letters, numbers and common
-          symbols only.
-        </p>
-        <div className="row">
-          <label className="sr-only" htmlFor="tv-text">
-            Text to type on the TV
-          </label>
-          <input id="tv-text" type="text" className="grow" value={text} maxLength={300} onChange={(e) => setText(e.target.value)} />
-          <button type="submit" className="primary" disabled={text === ''}>
-            Send
-          </button>
-          {sent && <span className="ok">Sent ✓</span>}
-        </div>
-      </form>
+          <div className="dpad-ring">
+            {btn('up', '▲', 'Up', 'dp dp-up')}
+            {btn('left', '◀', 'Left', 'dp dp-left')}
+            {btn('right', '▶', 'Right', 'dp dp-right')}
+            {btn('down', '▼', 'Down', 'dp dp-down')}
+            <button type="button" className="dp-ok" title="OK / Select" aria-label="OK / Select" onClick={() => void press('ok')}>
+              OK
+            </button>
+          </div>
+
+          <div className="nav-row">
+            {btn('back', '↩', 'Back', 'pill')}
+            {btn('home', '⌂', 'Home', 'pill')}
+            {btn('menu', '☰', 'Menu', 'pill')}
+          </div>
+
+          <div className="media-row">
+            <div className="vol" role="group" aria-label="Volume">
+              {btn('volumeUp', '+', 'Volume up', 'vol-btn')}
+              <span className="vol-label">VOL</span>
+              {btn('volumeDown', '−', 'Volume down', 'vol-btn')}
+            </div>
+            <div className="media-col">
+              {btn('playPause', '⏯', 'Play / Pause', 'pill')}
+              {btn('mute', '🔇', 'Mute', 'pill')}
+            </div>
+          </div>
+        </section>
+
+        <form className="card text-form" onSubmit={(e) => void sendText(e)}>
+          <h3>Type on the TV</h3>
+          <p className="muted small">
+            First select a text box on the TV (a search field, for example), then type here. Letters, numbers and common
+            symbols only.
+          </p>
+          <div className="row">
+            <label className="sr-only" htmlFor="tv-text">
+              Text to type on the TV
+            </label>
+            <input id="tv-text" type="text" className="grow" value={text} maxLength={300} onChange={(e) => setText(e.target.value)} />
+            <button type="submit" className="primary" disabled={text === ''}>
+              Send
+            </button>
+            {sent && <span className="ok">Sent ✓</span>}
+          </div>
+        </form>
+      </div>
     </>
   )
 }

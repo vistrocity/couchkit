@@ -104,6 +104,7 @@ export function Connect({ adb, connected, focusToken, onAdbChanged, onConnected 
       <History
         entries={history}
         busy={busy || !adbReady}
+        connectedId={connected?.serial ?? null}
         onConnect={(entry) => void connect(entry.id)}
         onChange={setHistory}
       />
@@ -141,11 +142,13 @@ function DeviceCard({ device, onDisconnect }: { device: DeviceInfo; onDisconnect
 interface HistoryProps {
   entries: HistoryEntry[]
   busy: boolean
+  /** The TV we are connected to right now, if any. */
+  connectedId: string | null
   onConnect: (entry: HistoryEntry) => void
   onChange: (entries: HistoryEntry[]) => void
 }
 
-function History({ entries, busy, onConnect, onChange }: HistoryProps): JSX.Element | null {
+function History({ entries, busy, connectedId, onConnect, onChange }: HistoryProps): JSX.Element | null {
   const [editing, setEditing] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
 
@@ -200,9 +203,15 @@ function History({ entries, busy, onConnect, onChange }: HistoryProps): JSX.Elem
             </div>
             {editing !== entry.id && (
               <div className="row">
-                <button type="button" className="primary" disabled={busy} onClick={() => onConnect(entry)}>
-                  Connect
-                </button>
+                {entry.id === connectedId ? (
+                  <button type="button" disabled>
+                    Connected ✓
+                  </button>
+                ) : (
+                  <button type="button" className="primary" disabled={busy} onClick={() => onConnect(entry)}>
+                    Connect
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {

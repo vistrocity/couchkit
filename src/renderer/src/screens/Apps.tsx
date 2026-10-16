@@ -72,9 +72,26 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
   const onDrop = (event: DragEvent): void => {
     event.preventDefault()
     setDragging(false)
-    const paths = Array.from(event.dataTransfer.files)
-      .map((f) => window.couchkit.pathForFile(f))
-      .filter((p) => p !== '')
+    const files = Array.from(event.dataTransfer.files)
+    const paths: string[] = []
+    for (const file of files) {
+      try {
+        const path = window.couchkit.pathForFile(file)
+        if (path !== '') paths.push(path)
+      } catch {
+        // handled below
+      }
+    }
+    if (paths.length === 0) {
+      setNotice({
+        ok: false,
+        category: 'other',
+        message: files.length === 0 ? 'Nothing was dropped.' : 'Couchkit could not read where that file is on your computer.',
+        fix: 'Use the "Choose files…" button instead, and tell me if dragging keeps failing.',
+        detail: `files dropped: ${files.length}`
+      })
+      return
+    }
     void install(paths)
   }
 
@@ -89,18 +106,21 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
   }
 
   return (
-    <>
+    <div
+      className="apps-page"
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'copy'
+        setDragging(true)
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget === e.target) setDragging(false)
+      }}
+      onDrop={onDrop}
+    >
       <h2>Apps</h2>
 
-      <div
-        className={dragging ? 'dropzone dragging' : 'dropzone'}
-        onDragOver={(e) => {
-          e.preventDefault()
-          setDragging(true)
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-      >
+      <div className={dragging ? 'dropzone dragging' : 'dropzone'}>
         <p>
           <strong>Drop .apk files here</strong> to install them on your TV
         </p>
@@ -210,6 +230,6 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
           </li>
         ))}
       </ul>
-    </>
+    </div>
   )
 }
