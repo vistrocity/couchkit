@@ -19,6 +19,7 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
   const [installResults, setInstallResults] = useState<ApkInstallResult[]>([])
   const [dragging, setDragging] = useState(false)
   const [confirm, setConfirm] = useState<string | null>(null)
+  const [confirmClear, setConfirmClear] = useState<string | null>(null)
   const [notice, setNotice] = useState<ActionResult | null>(null)
   const [busyPackage, setBusyPackage] = useState<string | null>(null)
   const [elevated, setElevated] = useState(false)
@@ -221,7 +222,27 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
                 {a.system ? ' · System app' : ''}
               </div>
             </div>
-            {confirm === a.packageName ? (
+            {confirmClear === a.packageName ? (
+              <div className="row clear-confirm">
+                <span>
+                  <strong>Delete all of this app's data?</strong> Logins, downloads and settings inside the app are erased and cannot be brought back.
+                </span>
+                <button
+                  type="button"
+                  className="danger"
+                  disabled={busyPackage !== null}
+                  onClick={() => {
+                    setConfirmClear(null)
+                    void act(a.packageName, () => window.couchkit.clearAppData(a.packageName))
+                  }}
+                >
+                  Yes, delete data
+                </button>
+                <button type="button" onClick={() => setConfirmClear(null)}>
+                  No
+                </button>
+              </div>
+            ) : confirm === a.packageName ? (
               <div className="row">
                 <span>{a.system ? 'Remove for this user? (reversible by factory reset)' : 'Remove this app?'}</span>
                 <button type="button" className="primary" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.uninstallApp(a.packageName))}>
@@ -235,6 +256,9 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
               <div className="row">
                 <button type="button" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.setAppEnabled(a.packageName, !a.enabled))}>
                   {a.enabled ? 'Disable' : 'Enable'}
+                </button>
+                <button type="button" disabled={busyPackage !== null} onClick={() => setConfirmClear(a.packageName)}>
+                  Clear data
                 </button>
                 <button type="button" disabled={busyPackage !== null} onClick={() => setConfirm(a.packageName)}>
                   Uninstall

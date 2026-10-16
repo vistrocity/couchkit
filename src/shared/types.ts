@@ -225,6 +225,13 @@ export interface PendingChange {
 
 export type ApplyTweakResult = { ok: true; pending?: PendingChange } | Failed
 
+export type ListScreensaversResult = { ok: true; options: import('./tweaks').ScreensaverOption[] } | Failed
+
+export type StorageResult = { ok: true; totalKb: number; freeKb: number } | Failed
+
+/** Result of asking the TV to clear its app caches. */
+export type TrimCachesResult = { ok: true; freeBeforeKb: number | null; freeAfterKb: number | null } | Failed
+
 /** What the UI is allowed to ask the main process to do. */
 export interface CouchkitApi {
   getAppInfo(): Promise<AppInfo>
@@ -296,6 +303,15 @@ export interface CouchkitApi {
   keepChange(): Promise<void>
   /** Undoes the waiting change right now. */
   undoChange(): Promise<ActionResult>
+  /** Sets the TV clock to this computer's time and time zone (needs automatic time off). */
+  setClockFromComputer(): Promise<ActionResult>
+  listScreensavers(): Promise<ListScreensaversResult>
+  setScreensaver(component: string): Promise<ActionResult>
+
+  readStorage(): Promise<StorageResult>
+  clearCaches(): Promise<TrimCachesResult>
+  closeBackgroundApps(): Promise<ActionResult>
+  clearAppData(packageName: string): Promise<ActionResult>
 }
 
 declare global {

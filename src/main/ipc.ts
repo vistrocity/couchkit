@@ -4,7 +4,7 @@ import { basename, isAbsolute, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
 import { AdbClient, type RecordingHandle } from './adb/client'
 import { findTvs } from './discovery'
-import { TWEAKS, densityRestore, findChoice, findTweak, isValidDensity } from '@shared/tweaks'
+import { clockCommands, densityRestore, findChoice, findTweak, isValidDensity } from '@shared/tweaks'
 import { captureFileName, isRecordingPreset } from './adb/capture'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
 import { runCommand, type LogSink } from './adb/runner'
@@ -22,6 +22,9 @@ import type {
   ListAppsResult,
   FindTvsResult,
   ApplyTweakResult,
+  ListScreensaversResult,
+  StorageResult,
+  TrimCachesResult,
   ListFilesResult,
   PendingChange,
   ReadTweaksResult,
@@ -474,6 +477,55 @@ export function registerIpc(): void {
   ipcMain.handle('tweaks:pending', (): PendingChange | null => (pending === null ? null : { label: pending.label, deadline: pending.deadline }))
   ipcMain.handle('tweaks:keep', (): void => keepPending())
   ipcMain.handle('tweaks:undo', (): Promise<ActionResult> => revertPending())
+
+  ipcMain.handle('tweaks:set-clock', async (): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const commands = clockCommands(Date.now(), zone) ?? clockCommands(Date.now(), null)
+    if (commands === null) return { ok: false, category: 'other', message: 'This computer\'s clock could not be read.', fix: '', detail: '' }
+    const result = await s.client.runSettingsCommands(s.serial, commands)
+    if (result.ok) return { ok: true, detail: 'The TV clock now matches this computer.' }
+    return { ...result, fix: 'Turn "Set date and time automatically" Off first. Some TVs never allow the clock to be set from a computer.' }
+  })
+
+  ipcMain.handle('tweaks:screensavers', async (): Promise<ListScreensaversResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    return s.client.listScreensavers(s.serial)
+  })
+
+  ipcMain.handle('tweaks:set-screensaver', async (_event, component: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.setScreensaver(s.serial, typeof component === 'string' ? component : '')
+  })
+
+  // ---- Cleanup ----
+
+  ipcMain.handle('cleanup:storage', async (): Promise<StorageResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    return s.client.readStorage(s.serial)
+  })
+
+  ipcMain.handle('cleanup:caches', async (): Promise<TrimCachesResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    return s.client.clearCaches(s.serial)
+  })
+
+  ipcMain.handle('cleanup:background', async (): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.closeBackgroundApps(s.serial)
+  })
+
+  ipcMain.handle('cleanup:app-data', async (_event, packageName: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.clearAppData(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
 
   // ---- Console ----
 

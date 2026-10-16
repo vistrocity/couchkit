@@ -16,6 +16,8 @@ export interface Tweak {
   id: string
   group: TweakGroup
   title: string
+  /** Tweaks with the same card name are shown together in one block. */
+  card?: string
   help: string
   /** Read-only commands that show the current state. The keys name the results. */
   reads: Readonly<Record<string, string>>
@@ -93,9 +95,9 @@ export const TWEAKS: readonly Tweak[] = [
     id: 'animations',
     group: 'Speed',
     title: 'Animation speed',
-    help: 'Menus and screens move faster when animations are shorter. "Off" removes the motion completely.',
+    help: 'Menus and screens move faster when animations are shorter. The number is the length of each animation compared with normal (1×). "Off" removes the motion completely.',
     reads: { scale: 'settings get global window_animation_scale' },
-    choices: [animationChoice('off', 'Off', '0'), animationChoice('fast', 'Fast', '0.5'), animationChoice('normal', 'Normal', '1'), animationChoice('slow', 'Slow', '1.5')],
+    choices: [animationChoice('off', 'Off · 0', '0'), animationChoice('fast', 'Fast · 0.5×', '0.5'), animationChoice('normal', 'Normal · 1×', '1'), animationChoice('slow', 'Slow · 1.5×', '1.5')],
     detect: (v) => {
       const n = num(v['scale']) ?? 1
       return n === 0 ? 'off' : n === 0.5 ? 'fast' : n === 1 ? 'normal' : n === 1.5 ? 'slow' : null
@@ -130,6 +132,7 @@ export const TWEAKS: readonly Tweak[] = [
   {
     id: 'timeout',
     group: 'System',
+    card: 'Screen off and screen saver',
     title: 'Screen timeout',
     help: 'How long the TV waits before the screen turns off. Some TVs ignore this setting.',
     reads: { ms: 'settings get system screen_off_timeout' },
@@ -153,9 +156,10 @@ export const TWEAKS: readonly Tweak[] = [
   {
     id: 'screensaver',
     group: 'System',
+    card: 'Screen off and screen saver',
     title: 'Screen saver',
     help: 'The pictures or clock shown when the TV is idle.',
-    reads: { on: 'settings get secure screensaver_enabled' },
+    reads: { on: 'settings get secure screensaver_enabled', component: 'settings get secure screensaver_components' },
     choices: [
       { id: 'on', label: 'On', commands: ['settings put secure screensaver_enabled 1'] },
       { id: 'off', label: 'Off', commands: ['settings put secure screensaver_enabled 0'] }
@@ -191,9 +195,10 @@ export const TWEAKS: readonly Tweak[] = [
   },
   {
     id: 'autotime',
-    group: 'Network',
+    group: 'System',
+    card: 'Date and time',
     title: 'Set date and time automatically',
-    help: 'Keeps the clock right using the network.',
+    help: 'Keeps the clock right using the network. Turn it Off if you want to set the clock yourself (below).',
     reads: { on: 'settings get global auto_time' },
     choices: [
       { id: 'on', label: 'On', commands: ['settings put global auto_time 1', 'settings put global auto_time_zone 1'] },
@@ -203,7 +208,8 @@ export const TWEAKS: readonly Tweak[] = [
   },
   {
     id: 'ntp',
-    group: 'Network',
+    group: 'System',
+    card: 'Date and time',
     title: 'Time server',
     help: 'Try another time server if the TV shows the wrong time even with automatic time on.',
     reads: { host: 'settings get global ntp_server' },
@@ -323,4 +329,63 @@ export function parseTweakReads(output: string): TweakSnapshot {
     return { id: t.id, choice: t.detect(values), values }
   })
   return { tweaks, density: parseDensity(sections.get('density') ?? '') }
+}
+
+
+// ---- Setting the clock by hand ----
+
+const TIME_ZONE = /^[A-Za-z]+(?:[/_+-][A-Za-z0-9]+){0,3}$/
+
+/** True for a time zone name such as "Asia/Kolkata". */
+export function isValidTimeZone(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 64 && TIME_ZONE.test(value)
+}
+
+/** Commands that set the TV clock (and, if given, the time zone). Only works while automatic time is off. */
+export function clockCommands(nowMs: unknown, zone: unknown): string[] | null {
+  if (typeof nowMs !== 'number' || !Number.isInteger(nowMs) || nowMs < 1_600_000_000_000 || nowMs > 4_000_000_000_000) return null
+  const commands: string[] = []
+  if (zone !== null && zone !== undefined) {
+    if (!isValidTimeZone(zone)) return null
+    commands.push(`cmd alarm set-timezone ${zone}`)
+  }
+  commands.push(`cmd alarm set-time ${nowMs}`)
+  return commands
+}
+
+// ---- Screen saver apps ----
+
+export interface ScreensaverOption {
+  /** package/class, as the TV names it. */
+  component: string
+  /** The app's package name, shown to the person. */
+  packageName: string
+}
+
+const COMPONENT = /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)*\/[A-Za-z0-9_.$]+$/
+
+export function isValidComponent(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 255 && COMPONENT.test(value)
+}
+
+/** The command that lists every screen saver app installed on the TV. */
+export const LIST_SCREENSAVERS_COMMAND = 'cmd package query-services --brief -a android.service.dreams.DreamService'
+
+/** Reads the component names out of the TV's answer (one per line, "package/class"). */
+export function parseScreensavers(output: string): ScreensaverOption[] {
+  const seen = new Set<string>()
+  const options: ScreensaverOption[] = []
+  for (const raw of output.split(/\r?\n/)) {
+    const line = raw.trim()
+    if (!isValidComponent(line)) continue
+    if (seen.has(line)) continue
+    seen.add(line)
+    options.push({ component: line, packageName: line.split('/')[0] ?? line })
+  }
+  return options
+}
+
+/** Commands that choose a screen saver app and make sure screen savers are on. */
+export function screensaverCommands(component: string): string[] {
+  return [`settings put secure screensaver_components '${component}'`, 'settings put secure screensaver_enabled 1']
 }

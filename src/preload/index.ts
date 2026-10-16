@@ -67,7 +67,14 @@ const api: CouchkitApi = {
   applyDensity: (value) => ipcRenderer.invoke('tweaks:density', value),
   pendingChange: () => ipcRenderer.invoke('tweaks:pending'),
   keepChange: () => ipcRenderer.invoke('tweaks:keep'),
-  undoChange: () => ipcRenderer.invoke('tweaks:undo')
+  undoChange: () => ipcRenderer.invoke('tweaks:undo'),
+  setClockFromComputer: () => ipcRenderer.invoke('tweaks:set-clock'),
+  listScreensavers: () => ipcRenderer.invoke('tweaks:screensavers'),
+  setScreensaver: (component) => ipcRenderer.invoke('tweaks:set-screensaver', component),
+  readStorage: () => ipcRenderer.invoke('cleanup:storage'),
+  clearCaches: () => ipcRenderer.invoke('cleanup:caches'),
+  closeBackgroundApps: () => ipcRenderer.invoke('cleanup:background'),
+  clearAppData: (packageName) => ipcRenderer.invoke('cleanup:app-data', packageName)
 }
 
 contextBridge.exposeInMainWorld('couchkit', api)

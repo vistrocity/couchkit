@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
-import { TWEAKS, MIN_DENSITY, MAX_DENSITY, isValidDensity, type TweakGroup, type TweakSnapshot } from '@shared/tweaks'
+import { TWEAKS, MIN_DENSITY, MAX_DENSITY, isValidDensity, type Tweak, type TweakGroup, type TweakSnapshot, type ScreensaverOption } from '@shared/tweaks'
 import type { ApplyTweakResult, DeviceInfo, PendingChange } from '@shared/types'
 
 interface Props {
@@ -9,6 +9,23 @@ interface Props {
 
 const GROUPS: readonly TweakGroup[] = ['Speed', 'Display', 'System', 'Network']
 
+interface CardInfo {
+  title: string
+  tweaks: Tweak[]
+}
+
+/** Groups the tweaks of one section into blocks; tweaks sharing a card name sit together. */
+function cardsFor(group: TweakGroup): CardInfo[] {
+  const cards: CardInfo[] = []
+  for (const t of TWEAKS.filter((x) => x.group === group)) {
+    const title = t.card ?? t.title
+    const existing = cards.find((c) => c.title === title)
+    if (existing === undefined) cards.push({ title, tweaks: [t] })
+    else existing.tweaks.push(t)
+  }
+  return cards
+}
+
 export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
   const [snapshot, setSnapshot] = useState<TweakSnapshot | null>(null)
   const [error, setError] = useState<{ message: string; fix: string; detail: string } | null>(null)
@@ -17,6 +34,8 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
   const [now, setNow] = useState(Date.now())
   const [custom, setCustom] = useState('')
   const [note, setNote] = useState('')
+  const [savers, setSavers] = useState<ScreensaverOption[] | null>(null)
+  const [clockNote, setClockNote] = useState<{ ok: boolean; text: string; fix: string } | null>(null)
 
   const refresh = useCallback(async (): Promise<void> => {
     const r = await window.couchkit.readTweaks()
@@ -27,6 +46,8 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
       setError({ message: r.message, fix: r.fix, detail: r.detail })
     }
     setPending(await window.couchkit.pendingChange())
+    const list = await window.couchkit.listScreensavers()
+    setSavers(list.ok ? list.options : null)
   }, [])
 
   useEffect(() => {
@@ -34,8 +55,7 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
   }, [connected, refresh])
 
   useEffect(() => {
-    if (pending === null) return
-    const id = setInterval(() => setNow(Date.now()), 250)
+    const id = setInterval(() => setNow(Date.now()), pending === null ? 1000 : 250)
     return () => clearInterval(id)
   }, [pending])
 
@@ -75,6 +95,22 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
     await finish(await window.couchkit.applyDensity(value))
   }
 
+  const setSaver = async (component: string): Promise<void> => {
+    setBusy(true)
+    const r = await window.couchkit.setScreensaver(component)
+    if (!r.ok) setError({ message: r.message, fix: r.fix, detail: r.detail })
+    else setError(null)
+    await refresh()
+    setBusy(false)
+  }
+
+  const setClock = async (): Promise<void> => {
+    setBusy(true)
+    const r = await window.couchkit.setClockFromComputer()
+    setClockNote(r.ok ? { ok: true, text: r.detail, fix: '' } : { ok: false, text: r.message, fix: r.fix })
+    setBusy(false)
+  }
+
   if (connected === null) {
     return (
       <>
@@ -89,6 +125,9 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
     )
   }
 
+  const autoTimeOn = snapshot?.tweaks.find((x) => x.id === 'autotime')?.choice === 'on'
+  const rawSaver = snapshot?.tweaks.find((x) => x.id === 'screensaver')?.values['component'] ?? 'null'
+  const currentSaver = rawSaver === 'null' || rawSaver === '' ? null : (rawSaver.split(',')[0] ?? null)
   const seconds = pending === null ? 0 : Math.max(0, Math.ceil((pending.deadline - now) / 1000))
   const density = snapshot?.density ?? null
   const customNumber = Number(custom)
@@ -153,32 +192,94 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
       {GROUPS.map((group) => (
         <section key={group}>
           <h3>{group}</h3>
-          {TWEAKS.filter((t) => t.group === group).map((t) => {
-            const active = snapshot?.tweaks.find((s) => s.id === t.id)?.choice ?? null
-            return (
-              <div className="card tweak" key={t.id}>
-                <p>
-                  <strong>{t.title}</strong>
-                </p>
-                <p className="muted">{t.help}</p>
-                <div className="row">
-                  {t.choices.map((c) => (
-                    <button
-                      type="button"
-                      key={c.id}
-                      className={active === c.id ? 'primary' : ''}
-                      aria-pressed={active === c.id}
-                      disabled={busy}
-                      onClick={() => void choose(t.id, c.id)}
-                    >
-                      {c.label}
-                    </button>
-                  ))}
+          {cardsFor(group).map((card) => (
+            <div className="card tweak" key={card.title}>
+              <p>
+                <strong>{card.title}</strong>
+              </p>
+              {card.tweaks.map((t) => {
+                const active = snapshot?.tweaks.find((x) => x.id === t.id)?.choice ?? null
+                return (
+                  <div className={card.tweaks.length > 1 ? 'subtweak' : ''} key={t.id}>
+                    {card.tweaks.length > 1 && (
+                      <p>
+                        <strong>{t.title}</strong>
+                      </p>
+                    )}
+                    <p className="muted">{t.help}</p>
+                    <div className="row">
+                      {t.choices.map((c) => (
+                        <button
+                          type="button"
+                          key={c.id}
+                          className={active === c.id ? 'primary' : ''}
+                          aria-pressed={active === c.id}
+                          disabled={busy}
+                          onClick={() => void choose(t.id, c.id)}
+                        >
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                    {snapshot !== null && active === null && <p className="muted">Currently set to something else.</p>}
+                  </div>
+                )
+              })}
+
+              {card.title === 'Screen off and screen saver' && (
+                <div className="subtweak">
+                  <p>
+                    <strong>Screen saver app</strong>
+                  </p>
+                  <p className="muted">
+                    Choose which app shows when the TV is idle (for example Aerial Views, if you installed it).
+                    {currentSaver === null ? ' Now: the TV\'s own screen saver.' : ` Now: ${currentSaver}.`}
+                  </p>
+                  {savers === null || savers.length === 0 ? (
+                    <p className="muted">No other screen saver apps were found on this TV.</p>
+                  ) : (
+                    <div className="row">
+                      {savers.map((o) => (
+                        <button
+                          type="button"
+                          key={o.component}
+                          className={o.component === currentSaver ? 'primary' : ''}
+                          aria-pressed={o.component === currentSaver}
+                          disabled={busy}
+                          title={o.component}
+                          onClick={() => void setSaver(o.component)}
+                        >
+                          {o.packageName}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {snapshot !== null && active === null && <p className="muted">Currently set to something else.</p>}
-              </div>
-            )
-          })}
+              )}
+
+              {card.title === 'Date and time' && (
+                <div className="subtweak">
+                  <p>
+                    <strong>Set the clock yourself</strong>
+                  </p>
+                  <p className="muted">
+                    Copies this computer's time ({new Date(now).toLocaleTimeString()}, {Intl.DateTimeFormat().resolvedOptions().timeZone}) to the TV.
+                    {autoTimeOn ? ' Turn "Set date and time automatically" Off first.' : ' Some TVs refuse this.'}
+                  </p>
+                  <div className="row">
+                    <button type="button" disabled={busy || autoTimeOn} onClick={() => void setClock()}>
+                      Set TV clock to this computer
+                    </button>
+                  </div>
+                  {clockNote !== null && (
+                    <p className={clockNote.ok ? 'muted' : 'warn'}>
+                      {clockNote.text} {clockNote.fix}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
           {group === 'Display' && (
             <div className="card tweak">
               <p>

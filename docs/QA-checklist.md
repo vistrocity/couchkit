@@ -120,4 +120,13 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 88. Close Couchkit (or press Disconnect) while a change is waiting: the TV is put back first.
 89. Screen-off timeout, screensaver, location, automatic time and Private DNS: choose each option and Refresh; the highlighted choice matches what you picked. Private DNS: pick AdGuard, check the TV still opens an app that needs internet, then choose Automatic to put it back.
 90. If a setting is refused by the TV, a plain red message appears with the technical details folded below.
+91. Tune-ups: "Animation speed" buttons show numbers (Off · 0, Fast · 0.5×, Normal · 1×, Slow · 1.5×).
+92. "Date and time" is one block holding automatic time, the time server and "Set the clock yourself".
+93. Turn automatic time Off, then press "Set TV clock to this computer": the TV clock and time zone match the computer (Settings > Date and time on the TV). While automatic time is On the button is greyed out. If your TV refuses, a plain message says so.
+94. "Screen off and screen saver" is one block. Under "Screen saver app" every screen saver installed on the TV is listed (for example Aerial Views, if installed) with the current one highlighted. Choose another and check it on the TV (Settings > Device Preferences > Screen saver).
+95. Cleanup page: Storage shows free space and a bar; Refresh updates it.
+96. "Clear caches": says how much was freed (or that nothing extra was reported). Apps still keep their logins.
+97. "Close background apps": a plain "Done" message appears.
+98. Apps page: "Clear data" asks "Delete all of this app's data?" with Yes/No. After Yes, open that app on the TV: it starts like new (logged out). Try it on a harmless app first.
+99. Apps page: "Clear data" on a protected system app (for example com.android.providers.settings, in the "all apps" filter) is refused with a plain message.
 

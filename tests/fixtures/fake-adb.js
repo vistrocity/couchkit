@@ -70,6 +70,17 @@ if (args[0] === 'version') {
   else out('Performing Streamed Install\nSuccess')
 } else if (args[0] === '-s' && args[2] === 'uninstall') {
   out('Success')
+} else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^(df -k \/data|pm trim-caches)/.test(args[3])) {
+  // Free space that grows after a cache trim (state in FAKE_ADB_DF, a JSON file).
+  const fs = require('fs')
+  const file = process.env.FAKE_ADB_DF
+  const st = file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { free: 2000000 }
+  fs.appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + args[3] + '\n')
+  if (/^pm trim-caches/.test(args[3])) { st.free += 300000; out('') }
+  else out('Filesystem     1K-blocks    Used Available Use% Mounted on\n/dev/block/dm-12  8000000 ' + (8000000 - st.free) + ' ' + st.free + '  70% /data')
+  if (file) fs.writeFileSync(file, JSON.stringify(st))
+} else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^cmd package query-services/.test(args[3])) {
+  out('priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false\ncom.android.deskclock/.Screensaver\npriority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false\ncom.neilturner.aerialviews/.service.DreamActivity')
 } else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^(settings |wm density|echo '@@)/.test(args[3])) {
   // A tiny stateful settings emulator for the Tune-ups tests (state in FAKE_ADB_SETTINGS, a JSON file).
   const fs = require('fs')

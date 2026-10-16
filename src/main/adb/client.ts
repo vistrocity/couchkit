@@ -10,7 +10,8 @@ import { explainFailure } from '@shared/explain'
 import { formatHostPort, type HostPort } from '@shared/network'
 import { isRemoteKey, isValidPackageName } from '@shared/remote'
 import { isValidCommand } from '@shared/console'
-import { READ_SCRIPT, parseTweakReads } from '@shared/tweaks'
+import { LIST_SCREENSAVERS_COMMAND, READ_SCRIPT, isValidComponent, parseScreensavers, parseTweakReads, screensaverCommands } from '@shared/tweaks'
+import { STORAGE_COMMAND, isProtectedPackage, parseStorage } from '@shared/cleanup'
 import { isDeletablePath, isValidRemotePath, joinRemotePath, normalizeRemotePath } from '@shared/tvpath'
 import type {
   ActionResult,
@@ -21,7 +22,10 @@ import type {
   ErrorCategory,
   ListAppsResult,
   ListFilesResult,
+  ListScreensaversResult,
   ReadTweaksResult,
+  StorageResult,
+  TrimCachesResult,
   ShellResult,
   TransferResult
 } from '@shared/types'
@@ -382,6 +386,76 @@ export class AdbClient {
       'Some TVs do not allow certain settings to be changed this way. The technical details below show what the TV said.',
       text
     )
+  }
+
+  /** Lists the screen saver apps installed on the TV. */
+  async listScreensavers(serial: string): Promise<ListScreensaversResult> {
+    const result = await this.shell(serial, [LIST_SCREENSAVERS_COMMAND], 30_000)
+    if (!result.ok) {
+      const category = result.category ?? 'other'
+      const { message, fix } = explainFailure(category)
+      return { ok: false, category, message, fix, detail: (result.stderr || result.stdout).trim() }
+    }
+    return { ok: true, options: parseScreensavers(result.stdout) }
+  }
+
+  /** Chooses a screen saver, but only one the TV just reported as installed. */
+  async setScreensaver(serial: string, component: string): Promise<ActionResult> {
+    if (!isValidComponent(component)) return actionFail('other', 'That screen saver name is not valid.', '', String(component).slice(0, 100))
+    const list = await this.listScreensavers(serial)
+    if (!list.ok) return list
+    if (!list.options.some((o) => o.component === component)) return actionFail('other', 'That screen saver is not installed on the TV.', 'Press Refresh and choose again.', component)
+    return this.runSettingsCommands(serial, screensaverCommands(component))
+  }
+
+  /** Free and total space of the TV's main storage. */
+  async readStorage(serial: string): Promise<StorageResult> {
+    const result = await this.shell(serial, [STORAGE_COMMAND], 30_000)
+    const parsed = result.ok ? parseStorage(result.stdout) : null
+    if (parsed !== null) return { ok: true, ...parsed }
+    const category = result.category ?? 'other'
+    const { message, fix } = result.ok
+      ? { message: 'The TV did not report its free space.', fix: 'This TV may not support the storage check.' }
+      : explainFailure(category)
+    return { ok: false, category, message, fix, detail: (result.stderr || result.stdout).trim() }
+  }
+
+  /** Asks the TV to throw away the temporary files (caches) of all apps. Saved data and logins stay. */
+  async clearCaches(serial: string): Promise<TrimCachesResult> {
+    const before = await this.readStorage(serial)
+    const result = await this.shell(serial, ['pm trim-caches 999G'], 120_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (!result.ok || /exception|error|denied|unknown|not found/i.test(text)) {
+      const failure = actionFail(
+        result.category ?? 'other',
+        'The TV did not clear its caches.',
+        'Some TVs do not allow this from a computer. You can clear one app at a time in the TV settings instead.',
+        text
+      )
+      return failure.ok ? { ok: true, freeBeforeKb: null, freeAfterKb: null } : failure
+    }
+    const after = await this.readStorage(serial)
+    return { ok: true, freeBeforeKb: before.ok ? before.freeKb : null, freeAfterKb: after.ok ? after.freeKb : null }
+  }
+
+  /** Closes apps running in the background (the ones you are not using). */
+  async closeBackgroundApps(serial: string): Promise<ActionResult> {
+    const result = await this.shell(serial, ['am kill-all'], 30_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (result.ok && !/exception|error|denied|unknown|not found/i.test(text)) return { ok: true, detail: 'Background apps closed.' }
+    return actionFail(result.category ?? 'other', 'The TV did not close its background apps.', 'Try again, or restart the TV.', text)
+  }
+
+  /** Wipes an app's saved data and settings (like a fresh install). Cannot be undone. */
+  async clearAppData(serial: string, packageName: string): Promise<ActionResult> {
+    if (!isValidPackageName(packageName)) return actionFail('other', 'That is not a valid app name.', '', String(packageName).slice(0, 100))
+    if (isProtectedPackage(packageName)) {
+      return actionFail('other', 'Couchkit will not clear this app.', 'Clearing it could break the TV\'s settings or screen.', packageName)
+    }
+    const result = await this.shell(serial, ['pm', 'clear', packageName], 60_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (/\bSuccess\b/.test(text)) return { ok: true, detail: 'Data cleared.' }
+    return actionFail(result.category ?? 'other', 'The TV did not clear the app.', 'Some apps are protected by the TV.', text)
   }
 
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {
