@@ -11,13 +11,24 @@ It talks to your TV over Wi-Fi using Google's `adb` and gives you plain buttons 
 Couchkit is an independent project. It is not affiliated with or endorsed by Google.
 "Android" and "Google TV" are trademarks of Google LLC.
 
+## Created by Steve Rozario
+
+Couchkit is free and open source under the [Apache License 2.0](LICENSE). Copyright 2026 Steve Rozario.
+If you share or modify it, you must keep the copyright notice and the [NOTICE](NOTICE) file.
+The Couchkit name and logo are not part of the licence ([TRADEMARKS.md](TRADEMARKS.md)): please give your own version its own name.
+
+If Couchkit saved you time, you can support it here:
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/vistrocity)
+Supporting is entirely optional; the app is complete and free either way.
+
 ## Get the app (no coding needed)
 
-1. Open the **Actions** tab of this repository and choose the latest successful **Build** run.
+1. Open the **Releases** page of this repository and download the installer for your system. (Before the first release, open the **Actions** tab, press **Run workflow** on **Build**, then pick that run.)
 2. Under **Artifacts**, download `couchkit-macOS` or `couchkit-Windows` and unzip it.
 3. Install:
-   - **macOS:** open the `.dmg` and drag Couchkit to Applications. The app is not signed yet, so the first time,
-     right-click it and choose **Open**, then **Open** again.
+   - **macOS:** open the `.dmg` and drag Couchkit to Applications. The app is not signed yet, so macOS blocks the
+     first open. Try to open it once, then go to **System Settings > Privacy & Security**, scroll down and press
+     **Open Anyway**. (Or run `xattr -cr /Applications/Couchkit.app` in Terminal once.)
    - **Windows:** run the `.exe` installer. Windows SmartScreen may warn about an unknown publisher:
      choose **More info**, then **Run anyway**.
 

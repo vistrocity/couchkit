@@ -73,7 +73,7 @@ export function Home({ info, adb, onAdbChanged, onGoToConnect, onGo, connected }
       <div className="card wide">
         <h3>About {ABOUT.name}</h3>
         <p className="muted">
-          Version {info?.appVersion ?? '…'} · Created by {ABOUT.creator} · Free and open source ({ABOUT.licence}).
+          Version {info?.appVersion ?? '…'} · Created by {ABOUT.creator} · Free and open source ({ABOUT.licence}). {ABOUT.copyright}. The Couchkit name and logo are not part of the licence.
         </p>
         <p className="muted small">
           No accounts, no tracking and no data leaves your computer. Couchkit downloads Google's adb tool only when you
@@ -82,7 +82,7 @@ export function Home({ info, adb, onAdbChanged, onGoToConnect, onGo, connected }
         </p>
         <div className="links">
           {ABOUT_LINKS.map((l) => (
-            <button type="button" key={l.id} onClick={() => void window.couchkit.openAboutLink(l.id)}>
+            <button type="button" key={l.id} className={l.id === 'support' ? 'primary' : undefined} onClick={() => void window.couchkit.openAboutLink(l.id)}>
               {l.label}
             </button>
           ))}

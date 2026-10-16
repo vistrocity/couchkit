@@ -16,7 +16,7 @@ export function buildMenu(): Menu {
 
   const help: MenuItemConstructorOptions = {
     role: 'help',
-    submenu: ABOUT_LINKS.filter((l) => l.id === 'github' || l.id === 'issues').map((l) => ({
+    submenu: ABOUT_LINKS.filter((l) => l.id === 'github' || l.id === 'issues' || l.id === 'support').map((l) => ({
       label: l.label,
       click: (): void => void shell.openExternal(l.url)
     }))

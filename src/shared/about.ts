@@ -3,6 +3,7 @@ export const ABOUT = {
   name: 'Couchkit',
   tagline: 'A friendly toolbox for your Google TV or Android TV.',
   creator: 'Steve Rozario',
+  copyright: 'Copyright 2026 Steve Rozario',
   licence: 'Apache License 2.0'
 } as const
 
@@ -13,6 +14,7 @@ export interface AboutLink {
 }
 
 export const ABOUT_LINKS: readonly AboutLink[] = [
+  { id: 'support', label: 'Support Couchkit', url: 'https://buymeacoffee.com/vistrocity' },
   { id: 'github', label: 'Project page on GitHub', url: 'https://github.com/vistrocity/couchkit' },
   { id: 'issues', label: 'Report a problem or suggest an idea', url: 'https://github.com/vistrocity/couchkit/issues' },
   { id: 'licence', label: 'Read the licence', url: 'https://github.com/vistrocity/couchkit/blob/main/LICENSE' },
