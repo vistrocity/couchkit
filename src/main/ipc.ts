@@ -1,5 +1,6 @@
-import { ipcMain } from 'electron'
-import { join } from 'node:path'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { existsSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
 import { AdbClient } from './adb/client'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
@@ -10,8 +11,11 @@ import { HistoryStore, removeEntry, renameEntry, upsertConnection } from './stor
 import { explainFailure } from '@shared/explain'
 import { parseHostPort } from '@shared/network'
 import type {
+  ActionResult,
   AdbStatus,
+  ApkInstallResult,
   AppInfo,
+  ListAppsResult,
   ConnectOutcome,
   DeviceInfo,
   ErrorCategory,
@@ -136,9 +140,98 @@ export function registerIpc(): void {
   })
 
   ipcMain.handle('log:list', (): LogEntry[] => activityLog.list())
+
+  // ---- Everything below needs a connected TV. ----
+
+  /** The adb client and TV for the current connection, or the reason there is none. */
+  const session = (): { client: AdbClient; serial: string } | ActionResult => {
+    const adbPath = locateAdb()
+    if (adbPath === null) return notReady('tool_missing')
+    if (connected === null) return notReady('unreachable', 'Connect to your TV first (Connect page).')
+    return { client: new AdbClient({ binary: adbPath, log: sink }), serial: connected.serial }
+  }
+
+  ipcMain.handle('remote:key', async (_event, key: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.sendKey(s.serial, typeof key === 'string' ? key : '')
+  })
+
+  ipcMain.handle('remote:text', async (_event, text: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.sendText(s.serial, typeof text === 'string' ? text : '')
+  })
+
+  ipcMain.handle('apps:list', async (): Promise<ListAppsResult> => {
+    const s = session()
+    if (!('client' in s)) {
+      return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    }
+    return s.client.listApps(s.serial)
+  })
+
+  ipcMain.handle('apps:pick', async (event): Promise<string[]> => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      title: 'Choose app files to install',
+      properties: ['openFile', 'multiSelections'] as Array<'openFile' | 'multiSelections'>,
+      filters: [{ name: 'Android apps (.apk)', extensions: ['apk'] }]
+    }
+    const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
+    return result.canceled ? [] : result.filePaths
+  })
+
+  ipcMain.handle('apps:install', async (event, paths: unknown): Promise<ApkInstallResult[]> => {
+    const list = Array.isArray(paths) ? paths.filter((p): p is string => typeof p === 'string').slice(0, 50) : []
+    const s = session()
+    const results: ApkInstallResult[] = []
+    for (const [i, path] of list.entries()) {
+      const name = basename(path)
+      if (!('client' in s)) {
+        results.push({ path, name, ok: false, message: s.ok ? '' : s.message, ...(s.ok ? {} : { fix: s.fix }) })
+        continue
+      }
+      if (!path.toLowerCase().endsWith('.apk') || !existsSync(path)) {
+        results.push({
+          path,
+          name,
+          ok: false,
+          message: 'That is not an .apk file, or it could not be found.',
+          fix: 'Choose a file that ends in .apk.'
+        })
+        continue
+      }
+      if (!event.sender.isDestroyed()) {
+        event.sender.send('apps:install-progress', { index: i + 1, total: list.length, name })
+      }
+      results.push(await s.client.installApk(s.serial, path, name))
+    }
+    return results
+  })
+
+  ipcMain.handle('apps:uninstall', async (_event, packageName: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.uninstall(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
+
+  ipcMain.handle(
+    'apps:set-enabled',
+    async (_event, packageName: unknown, enabled: unknown): Promise<ActionResult> => {
+      const s = session()
+      if (!('client' in s)) return s
+      return s.client.setEnabled(s.serial, typeof packageName === 'string' ? packageName : '', enabled === true)
+    }
+  )
 }
 
 function failureText(category: ErrorCategory): [string, string] {
   const { message, fix } = explainFailure(category)
   return [message, fix]
+}
+
+function notReady(category: ErrorCategory, fixOverride?: string): ActionResult {
+  const { message, fix } = explainFailure(category)
+  return { ok: false, category, message, fix: fixOverride ?? fix, detail: '' }
 }

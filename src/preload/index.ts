@@ -1,5 +1,5 @@
-import { contextBridge, ipcRenderer } from 'electron'
-import type { CouchkitApi, DownloadProgress } from '@shared/types'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import type { ApkInstallProgress, CouchkitApi, DownloadProgress } from '@shared/types'
 
 /**
  * The bridge: the only things the UI is allowed to ask the main process to do.
@@ -22,7 +22,22 @@ const api: CouchkitApi = {
   listHistory: () => ipcRenderer.invoke('history:list'),
   renameHistory: (id, nickname) => ipcRenderer.invoke('history:rename', id, nickname),
   removeHistory: (id) => ipcRenderer.invoke('history:remove', id),
-  listLog: () => ipcRenderer.invoke('log:list')
+  listLog: () => ipcRenderer.invoke('log:list'),
+  sendKey: (key) => ipcRenderer.invoke('remote:key', key),
+  sendText: (text) => ipcRenderer.invoke('remote:text', text),
+  listApps: () => ipcRenderer.invoke('apps:list'),
+  pickApks: () => ipcRenderer.invoke('apps:pick'),
+  pathForFile: (file) => webUtils.getPathForFile(file),
+  installApks: (paths) => ipcRenderer.invoke('apps:install', paths),
+  onApkProgress: (listener) => {
+    const handler = (_event: unknown, progress: ApkInstallProgress): void => listener(progress)
+    ipcRenderer.on('apps:install-progress', handler)
+    return () => {
+      ipcRenderer.removeListener('apps:install-progress', handler)
+    }
+  },
+  uninstallApp: (packageName) => ipcRenderer.invoke('apps:uninstall', packageName),
+  setAppEnabled: (packageName, enabled) => ipcRenderer.invoke('apps:set-enabled', packageName, enabled)
 }
 
 contextBridge.exposeInMainWorld('couchkit', api)

@@ -39,3 +39,20 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 | 22 | With the TV turned off, connecting shows a clear message and no endless spinner | ☐ | ☐ |
 | 23 | Activity page lists the adb commands that ran, with their output | ☐ | ☐ |
 | 24 | **Cmd+K** (Mac) or **Ctrl+K** (Windows) jumps to the address box | ☐ | ☐ |
+
+## Slice 2 (remote and apps) - test on a real TV
+
+25. Remote page before connecting says "Connect to your TV first".
+26. After connecting, click Up/Down/Left/Right/OK: the highlight moves on the TV.
+27. Back, Home, Menu work. Play/Pause, Vol +/-, Mute work while media plays.
+28. Keyboard: arrow keys, Enter, Esc, H, M, Space act as the remote (not while typing in the text box).
+29. Power asks "Turn the TV on or off?" first; Yes sends it, Cancel does nothing.
+30. Select a search box on the TV, type "hello world" and press Send: the text appears.
+31. Apps page lists apps you installed (with version and store); switching to "All apps" adds system apps.
+32. Search filters the list. Refresh reloads it.
+33. Drop a real .apk onto the box (and use "Choose files..."): it installs and shows "Installed."
+34. Drop a non-.apk file: it says it is not an .apk file.
+35. Disable an app you installed: it shows "(disabled)" after refresh; Enable brings it back.
+36. Uninstall asks to confirm; after Yes the app disappears from the list.
+37. Activity page shows each command, including install and uninstall.
+38. On a Mac, repeat 25-37 (also check that drag and drop works there).

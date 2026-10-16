@@ -3,9 +3,10 @@
 A desktop toolbox for **Google TV** and **Android TV** devices, for macOS and Windows.
 It talks to your TV over Wi-Fi using Google's `adb` and gives you plain buttons instead of commands.
 
-> **Status: early development (v0.1, second slice).** The app can download `adb`, connect to your TV by address,
+> **Status: early development (v0.1, third slice).** The app can download `adb`, connect to your TV by address,
 > remember the TVs you used, show their details, and list every command it ran (Activity page).
-> The remote, app manager, files, capture, and the rest arrive in the next slices.
+> It also has an on-screen remote (with keyboard keys and typing) and an app manager (install .apk files, uninstall,
+> disable/enable). Files, capture, and the rest arrive in the next slices.
 
 Couchkit is an independent project. It is not affiliated with or endorsed by Google.
 "Android" and "Google TV" are trademarks of Google LLC.

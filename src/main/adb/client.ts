@@ -1,9 +1,22 @@
+import { explainInstallFailure } from './apk'
 import { classifyAdbFailure } from './classify'
+import { KEYCODES } from './keys'
+import { VERSION_NAMES_COMMAND, buildApps, packageNameSet, parsePackageList, parseVersionNames } from './packages'
+import { buildTextArg } from './text'
 import { parseConnectOutput, parseDevices, parseGetprop, parseWmSize } from './parse'
 import { runCommand, type LogSink } from './runner'
 import { explainFailure } from '@shared/explain'
 import { formatHostPort, type HostPort } from '@shared/network'
-import type { CommandResult, ConnectOutcome, DeviceInfo, ErrorCategory } from '@shared/types'
+import { isRemoteKey, isValidPackageName } from '@shared/remote'
+import type {
+  ActionResult,
+  ApkInstallResult,
+  CommandResult,
+  ConnectOutcome,
+  DeviceInfo,
+  ErrorCategory,
+  ListAppsResult
+} from '@shared/types'
 
 export interface AdbClientOptions {
   /** Path of the adb program. */
@@ -110,6 +123,98 @@ export class AdbClient {
     }
   }
 
+  private shell(serial: string, args: readonly string[], timeoutMs = 15_000): Promise<CommandResult> {
+    return this.run(['-s', serial, 'shell', ...args], timeoutMs)
+  }
+
+  /** Presses a remote button. */
+  async sendKey(serial: string, key: string): Promise<ActionResult> {
+    if (!isRemoteKey(key)) return actionFail('other', 'That button does not exist.', '', key)
+    const result = await this.shell(serial, ['input', 'keyevent', KEYCODES[key]])
+    return fromCommand(result, 'Sent.')
+  }
+
+  /** Types text into whatever field is focused on the TV. */
+  async sendText(serial: string, text: string): Promise<ActionResult> {
+    const built = buildTextArg(text)
+    if (!built.ok) return actionFail('other', built.message, 'Change the text and try again.', '')
+    const result = await this.shell(serial, ['input', 'text', built.arg])
+    return fromCommand(result, 'Sent.')
+  }
+
+  /** Lists the apps on the TV. */
+  async listApps(serial: string): Promise<ListAppsResult> {
+    let all = await this.shell(serial, ['pm', 'list', 'packages', '-i', '--show-versioncode'], 30_000)
+    if (!all.ok) all = await this.shell(serial, ['pm', 'list', 'packages', '-i'], 30_000)
+    if (!all.ok) {
+      const category = all.category ?? 'other'
+      const { message, fix } = explainFailure(category)
+      return { ok: false, category, message, fix, detail: (all.stderr || all.stdout).trim() }
+    }
+    const [user, disabled, versions] = await Promise.all([
+      this.shell(serial, ['pm', 'list', 'packages', '-3'], 30_000),
+      this.shell(serial, ['pm', 'list', 'packages', '-d'], 30_000),
+      this.shell(serial, [VERSION_NAMES_COMMAND], 60_000)
+    ])
+    return {
+      ok: true,
+      apps: buildApps({
+        all: parsePackageList(all.stdout),
+        userPackages: packageNameSet(user.stdout),
+        disabledPackages: packageNameSet(disabled.stdout),
+        versionNames: versions.ok ? parseVersionNames(versions.stdout) : {}
+      })
+    }
+  }
+
+  /** Installs one APK file from this computer. */
+  async installApk(serial: string, path: string, name: string): Promise<ApkInstallResult> {
+    const result = await this.run(['-s', serial, 'install', '-r', path], 300_000)
+    const text = `${result.stdout}\n${result.stderr}`
+    if (result.ok && /\bSuccess\b/.test(text)) return { path, name, ok: true, message: 'Installed.' }
+    if (!result.ok && result.category !== undefined && result.category !== 'other' && !/INSTALL_/.test(text)) {
+      const { message, fix } = explainFailure(result.category)
+      return { path, name, ok: false, message, fix }
+    }
+    const reason = explainInstallFailure(text)
+    return { path, name, ok: false, message: reason.message, fix: reason.fix }
+  }
+
+  /** Removes an app. Apps that came with the TV are only removed for the current user (reversible). */
+  async uninstall(serial: string, packageName: string): Promise<ActionResult> {
+    if (!isValidPackageName(packageName)) return actionFail('other', 'That is not a valid app name.', '', packageName)
+    const user = await this.shell(serial, ['pm', 'list', 'packages', '-3'], 30_000)
+    const isUserApp = packageNameSet(user.stdout).has(packageName)
+    const result = isUserApp
+      ? await this.run(['-s', serial, 'uninstall', packageName], 60_000)
+      : await this.shell(serial, ['pm', 'uninstall', '--user', '0', packageName], 60_000)
+    const text = `${result.stdout}\n${result.stderr}`
+    if (/\bSuccess\b/.test(text)) return { ok: true, detail: 'Removed.' }
+    return actionFail(
+      result.category ?? 'other',
+      'The TV did not remove the app.',
+      'Some apps are protected by the TV. Try turning it off (Disable) instead.',
+      text.trim()
+    )
+  }
+
+  /** Turns an app off or on without removing it. */
+  async setEnabled(serial: string, packageName: string, enabled: boolean): Promise<ActionResult> {
+    if (!isValidPackageName(packageName)) return actionFail('other', 'That is not a valid app name.', '', packageName)
+    const args = enabled
+      ? ['pm', 'enable', packageName]
+      : ['pm', 'disable-user', '--user', '0', packageName]
+    const result = await this.shell(serial, args, 30_000)
+    const text = `${result.stdout}\n${result.stderr}`
+    if (result.ok && /new state/i.test(text)) return { ok: true, detail: enabled ? 'Enabled.' : 'Disabled.' }
+    return actionFail(
+      result.category ?? 'other',
+      enabled ? 'The TV did not turn the app on.' : 'The TV did not turn the app off.',
+      'Some apps are protected by the TV and cannot be changed.',
+      text.trim()
+    )
+  }
+
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {
     const serial = formatHostPort(target)
     const [props, size] = await Promise.all([
@@ -137,4 +242,15 @@ export class AdbClient {
 function fail(category: ErrorCategory, detail: string): ConnectOutcome {
   const { message, fix } = explainFailure(category)
   return { ok: false, category, message, fix, detail: detail.trim() }
+}
+
+function actionFail(category: ErrorCategory, message: string, fix: string, detail: string): ActionResult {
+  return { ok: false, category, message, fix, detail }
+}
+
+function fromCommand(result: CommandResult, okDetail: string): ActionResult {
+  if (result.ok) return { ok: true, detail: okDetail }
+  const category = result.category ?? 'other'
+  const { message, fix } = explainFailure(category)
+  return actionFail(category, message, fix, (result.stderr || result.stdout).trim())
 }

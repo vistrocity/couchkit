@@ -100,6 +100,45 @@ export interface LogEntry {
   output: string
 }
 
+/** The result of something done on the TV (a key press, an install, and so on). */
+export type ActionResult =
+  | { ok: true; detail: string }
+  | { ok: false; category: ErrorCategory; message: string; fix: string; detail: string }
+
+/** One app on the TV. */
+export interface AppPackage {
+  packageName: string
+  versionName?: string
+  versionCode?: string
+  /** Who installed it: a store name, "Sideloaded", or the raw installer id. */
+  installedFrom: string
+  /** True for apps that came with the TV. */
+  system: boolean
+  /** False if the app has been turned off. */
+  enabled: boolean
+}
+
+export type ListAppsResult =
+  | { ok: true; apps: AppPackage[] }
+  | { ok: false; category: ErrorCategory; message: string; fix: string; detail: string }
+
+/** The outcome of installing one APK file. */
+export interface ApkInstallResult {
+  path: string
+  /** File name only, for display. */
+  name: string
+  ok: boolean
+  message: string
+  fix?: string
+}
+
+export interface ApkInstallProgress {
+  /** 1-based position of the file being installed. */
+  index: number
+  total: number
+  name: string
+}
+
 /** What the UI is allowed to ask the main process to do. */
 export interface CouchkitApi {
   getAppInfo(): Promise<AppInfo>
@@ -114,6 +153,21 @@ export interface CouchkitApi {
   renameHistory(id: string, nickname: string): Promise<HistoryEntry[]>
   removeHistory(id: string): Promise<HistoryEntry[]>
   listLog(): Promise<LogEntry[]>
+
+  /** Press a remote button on the connected TV. */
+  sendKey(key: string): Promise<ActionResult>
+  /** Type text into the field that is focused on the TV. */
+  sendText(text: string): Promise<ActionResult>
+
+  listApps(): Promise<ListAppsResult>
+  /** Opens the system file picker for APK files. Returns the chosen paths (empty if cancelled). */
+  pickApks(): Promise<string[]>
+  /** Turns a file the user dropped onto the window into its path on this computer. */
+  pathForFile(file: File): string
+  installApks(paths: string[]): Promise<ApkInstallResult[]>
+  onApkProgress(listener: (progress: ApkInstallProgress) => void): () => void
+  uninstallApp(packageName: string): Promise<ActionResult>
+  setAppEnabled(packageName: string, enabled: boolean): Promise<ActionResult>
 }
 
 declare global {
