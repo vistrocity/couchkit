@@ -26,6 +26,10 @@ export class ActivityLog {
     if (this.entries.length > this.capacity) this.entries.shift()
   }
 
+  clear(): void {
+    this.entries.length = 0
+  }
+
   /** Newest first. */
   list(): LogEntry[] {
     return [...this.entries].reverse()

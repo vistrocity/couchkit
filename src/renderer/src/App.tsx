@@ -11,8 +11,10 @@ import { Remote } from './screens/Remote'
 import { Tune } from './screens/Tune'
 import { Cleanup } from './screens/Cleanup'
 import { Backup } from './screens/Backup'
+import { Restart } from './screens/Restart'
+import { Ideas } from './screens/Ideas'
 
-/** Sidebar sections. Home, Connect, Remote, Apps, Files, Capture, Tune-ups, Cleanup, Backup, Console and Activity work; the others come in later updates. */
+/** Sidebar sections. Home, Connect, Remote, Apps, Files, Capture, Tune-ups, Cleanup, Backup, Restart, App ideas, Console and Activity work; the others come in later updates. */
 const SECTIONS = [
   { id: 'home', label: 'Home' },
   { id: 'connect', label: 'Connect' },
@@ -23,6 +25,8 @@ const SECTIONS = [
   { id: 'tune', label: 'Tune-ups' },
   { id: 'cleanup', label: 'Cleanup' },
   { id: 'backup', label: 'Backup' },
+  { id: 'restart', label: 'Restart' },
+  { id: 'ideas', label: 'App ideas' },
   { id: 'console', label: 'Console' },
   { id: 'log', label: 'Activity' }
 ] as const
@@ -121,6 +125,8 @@ export function App(): JSX.Element {
           )}
           {section === 'remote' && <Remote connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'apps' && <Apps connected={connected} onGoToConnect={() => setSection('connect')} />}
+          {section === 'restart' && <Restart connected={connected} onGoToConnect={() => setSection('connect')} onRestarted={() => setConnected(null)} />}
+          {section === 'ideas' && <Ideas />}
           {section === 'backup' && <Backup connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'cleanup' && <Cleanup connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'tune' && <Tune connected={connected} onGoToConnect={() => setSection('connect')} />}
@@ -136,7 +142,7 @@ export function App(): JSX.Element {
             />}
           {section === 'files' && <Files connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'log' && <Activity />}
-          {!['home', 'connect', 'remote', 'apps', 'files', 'capture', 'tune', 'cleanup', 'backup', 'console', 'log'].includes(section) && (
+          {!['home', 'connect', 'remote', 'apps', 'files', 'capture', 'tune', 'cleanup', 'backup', 'restart', 'ideas', 'console', 'log'].includes(section) && (
             <>
               <h2>{SECTIONS.find((s) => s.id === section)?.label}</h2>
               <p className="muted">This section is not built yet.</p>

@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent, type JSX } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent, type JSX } from 'react'
 import { Icon } from '../components/Icon'
+import { formatKb } from '@shared/cleanup'
+import { formatUptime, type HardwareInfo } from '@shared/hardware'
 import type { AdbStatus, ConnectOutcome, DeviceInfo, FindTvsResult, HistoryEntry } from '@shared/types'
 import { AdbCard } from '../components/AdbCard'
 
@@ -160,28 +162,60 @@ export function Connect({ adb, connected, focusToken, onAdbChanged, onConnected,
 }
 
 function DeviceCard({ device, onDisconnect }: { device: DeviceInfo; onDisconnect: () => void }): JSX.Element {
+  const [hardware, setHardware] = useState<HardwareInfo | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const loadHardware = useCallback(async (): Promise<void> => {
+    setLoading(true)
+    const r = await window.couchkit.readHardware()
+    setHardware(r.ok ? r.hardware : null)
+    setLoading(false)
+  }, [])
+
+  useEffect(() => {
+    void loadHardware()
+  }, [device.serial, loadHardware])
+
   const rows: Array<[string, string | undefined]> = [
     ['Model', [device.manufacturer, device.model].filter(Boolean).join(' ') || undefined],
     ['Android version', device.androidVersion !== undefined ? `${device.androidVersion} (API ${device.sdkLevel ?? '?'})` : undefined],
     ['Screen resolution', device.resolution],
-    ['Address', device.serial],
+    ['Memory (RAM)', hardware?.ramKb != null ? formatKb(hardware.ramKb) : undefined],
+    [
+      'Storage',
+      hardware?.storage != null ? `${formatKb(hardware.storage.freeKb)} free of ${formatKb(hardware.storage.totalKb)}` : undefined
+    ],
+    ['Address', device.serial]
+  ]
+  const more: Array<[string, string | undefined]> = [
+    ['Processor', [hardware?.chip, hardware?.cpuAbi].filter(Boolean).join(' · ') || undefined],
+    ['Running for', hardware?.uptimeSeconds != null ? formatUptime(hardware.uptimeSeconds) : undefined],
+    ['Security update', hardware?.securityPatch],
     ['Serial number', device.hardwareSerial],
     ['Build', device.buildId]
   ]
+  const show = (label: string, value: string | undefined): JSX.Element => (
+    <div key={label} className="kv">
+      <dt>{label}</dt>
+      <dd>{value ?? (loading ? 'reading…' : 'unavailable')}</dd>
+    </div>
+  )
   return (
     <section className="card" aria-labelledby="device-heading">
       <h3 id="device-heading">Connected TV</h3>
-      <dl>
-        {rows.map(([label, value]) => (
-          <div key={label} className="kv">
-            <dt>{label}</dt>
-            <dd>{value ?? 'unavailable'}</dd>
-          </div>
-        ))}
-      </dl>
-      <button type="button" className="danger" onClick={onDisconnect}>
-        Disconnect
-      </button>
+      <dl>{rows.map(([label, value]) => show(label, value))}</dl>
+      <details>
+        <summary>More details</summary>
+        <dl>{more.map(([label, value]) => show(label, value))}</dl>
+      </details>
+      <div className="row">
+        <button type="button" className="danger" onClick={onDisconnect}>
+          Disconnect
+        </button>
+        <button type="button" disabled={loading} onClick={() => void loadHardware()}>
+          Refresh details
+        </button>
+      </div>
     </section>
   )
 }

@@ -225,6 +225,15 @@ export interface PendingChange {
 
 export type ApplyTweakResult = { ok: true; pending?: PendingChange } | Failed
 
+export type HardwareResult = { ok: true; hardware: import('./hardware').HardwareInfo } | Failed
+
+export interface AppSettings {
+  /** Whether Couchkit keeps a list of the commands it runs (off unless the person turns it on). */
+  activityLog: boolean
+}
+
+export type RestartMode = 'system' | 'recovery' | 'bootloader'
+
 export type ListScreensaversResult = { ok: true; options: import('./tweaks').ScreensaverOption[] } | Failed
 
 export type StorageResult = { ok: true; totalKb: number; freeKb: number } | Failed
@@ -309,6 +318,13 @@ export interface CouchkitApi {
   setClockFromComputer(): Promise<ActionResult>
   listScreensavers(): Promise<ListScreensaversResult>
   setScreensaver(component: string): Promise<ActionResult>
+
+  readHardware(): Promise<HardwareResult>
+  getSettings(): Promise<AppSettings>
+  setActivityLog(enabled: boolean): Promise<AppSettings>
+  clearLog(): Promise<void>
+  restartTv(mode: RestartMode): Promise<ActionResult>
+  openIdea(id: string): Promise<void>
 
   readStorage(): Promise<StorageResult>
   clearCaches(): Promise<TrimCachesResult>

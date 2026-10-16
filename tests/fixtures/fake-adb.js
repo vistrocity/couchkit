@@ -81,6 +81,10 @@ if (args[0] === 'version') {
   else out('Performing Streamed Install\nSuccess')
 } else if (args[0] === '-s' && args[2] === 'uninstall') {
   out('Success')
+} else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^echo '@@mem'/.test(args[3])) {
+  out('@@mem\nMemTotal:        1950340 kB\n@@disk\nFilesystem     1K-blocks    Used Available Use% Mounted on\n/dev/block/dm-12  8000000 6000000 2000000  75% /data\n@@up\n275400.12 900000.00\n@@abi\narm64-v8a\n@@chip\nmt8696\nmt8696\n@@patch\n2022-05-05')
+} else if (args[0] === '-s' && args[2] === 'reboot') {
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'reboot ' + args.slice(3).join(' ') + '\n')
 } else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^(df -k \/data|pm trim-caches)/.test(args[3])) {
   // Free space that grows after a cache trim (state in FAKE_ADB_DF, a JSON file).
   const fs = require('fs')

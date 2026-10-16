@@ -1,4 +1,4 @@
-import { BrowserWindow, app, dialog, ipcMain } from 'electron'
+import { BrowserWindow, app, dialog, ipcMain, shell } from 'electron'
 import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, isAbsolute, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
@@ -13,6 +13,8 @@ import { installPlatformTools, platformToolsUrl } from './adb/install'
 import { runCommand, type LogSink } from './adb/runner'
 import { platform } from './platform'
 import { ActivityLog } from './store/activity-log'
+import { SettingsStore } from './store/settings'
+import { findIdea } from '@shared/ideas'
 import { ShortcutStore, addShortcut, removeShortcut } from './store/shortcuts'
 import { HistoryStore, removeEntry, renameEntry, upsertConnection } from './store/history'
 import { explainFailure } from '@shared/explain'
@@ -25,6 +27,9 @@ import type {
   ListAppsResult,
   FindTvsResult,
   ApplyTweakResult,
+  AppSettings,
+  HardwareResult,
+  RestartMode,
   ListScreensaversResult,
   StorageResult,
   TrimCachesResult,
@@ -51,12 +56,17 @@ import type {
 export function registerIpc(): void {
   const activityLog = new ActivityLog()
   const history = new HistoryStore(join(platform.dataDir(), 'history.json'))
+  const settings = new SettingsStore(join(platform.dataDir(), 'settings.json'))
+  let logEnabled = false
+  void settings.load().then((v) => {
+    logEnabled = v.activityLog
+  })
   const shortcuts = new ShortcutStore(join(platform.dataDir(), 'shortcuts.json'))
   let connected: DeviceInfo | null = null
   let installing = false
 
   const sink: LogSink = (entry) => {
-    activityLog.add(entry)
+    if (logEnabled) activityLog.add(entry)
     console.log(`[adb] ${entry.ok ? 'ok  ' : 'fail'} ${entry.durationMs}ms  ${entry.command}`)
   }
 
@@ -144,6 +154,24 @@ export function registerIpc(): void {
     connected = null
   })
 
+  ipcMain.handle('device:hardware', async (): Promise<HardwareResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    return s.client.readHardware(s.serial)
+  })
+
+  ipcMain.handle('device:restart', async (_event, mode: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    if (mode !== 'system' && mode !== 'recovery' && mode !== 'bootloader') {
+      return { ok: false, category: 'other', message: 'That restart option does not exist.', fix: '', detail: '' }
+    }
+    await revertPending()
+    const result = await s.client.restart(s.serial, mode as RestartMode)
+    if (result.ok) connected = null
+    return result
+  })
+
   ipcMain.handle('device:current', (): DeviceInfo | null => connected)
 
   ipcMain.handle('history:list', (): Promise<HistoryEntry[]> => history.load())
@@ -168,6 +196,18 @@ export function registerIpc(): void {
   })
 
   ipcMain.handle('log:list', (): LogEntry[] => activityLog.list())
+  ipcMain.handle('log:clear', (): void => activityLog.clear())
+  ipcMain.handle('settings:get', (): Promise<AppSettings> => settings.load())
+  ipcMain.handle('settings:activity-log', async (_event, enabled: unknown): Promise<AppSettings> => {
+    logEnabled = enabled === true
+    if (!logEnabled) activityLog.clear()
+    return settings.save({ ...(await settings.load()), activityLog: logEnabled })
+  })
+
+  ipcMain.handle('ideas:open', async (_event, id: unknown): Promise<void> => {
+    const idea = findIdea(id)
+    if (idea !== undefined && idea.url.startsWith('https://')) await shell.openExternal(idea.url)
+  })
 
   // ---- Everything below needs a connected TV. ----
 

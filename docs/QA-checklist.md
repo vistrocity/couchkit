@@ -135,4 +135,9 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 103. Uninstall one of those apps from the Apps page, then on Backup press "Choose backup folder…", pick the backup, tick the app and press "Restore". The app is back on the TV (it opens logged out, because only the app is saved, not its data).
 104. Restoring an app that is already on the TV at the same version just reinstalls it; restoring an older version over a newer one says "A newer version of this app is already on the TV."
 105. An app that cannot be saved (for example one that came with the TV) is listed with a plain reason.
+106. Connect page: the Connected TV box now shows Memory (RAM) and Storage (free of total). "More details" folds out Processor, Running for, Security update, Serial number and Build. "Refresh details" re-reads them.
+107. Activity page: it starts OFF with a short explanation. "Turn on the activity log" starts the list; "Clear" empties it; "Turn off" stops and empties it. The choice is remembered when you restart Couchkit.
+108. Restart page: "Restart" asks Yes/No, then the TV restarts, the status bar says "Not connected", and you can reconnect from Connect once the TV is back (about a minute).
+109. "Restart into recovery" and "Restart into bootloader" show a warning first. Only try recovery if you are ready to use the TV remote in its menu (choose the option that reboots normally to leave it). Many TVs do not support bootloader mode; skip it unless you know why you need it.
+110. App ideas page: seven apps, each with "Open project page", which opens the project's own web page in your browser. Nothing is installed by Couchkit.
 

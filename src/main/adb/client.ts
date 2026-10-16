@@ -11,6 +11,7 @@ import { formatHostPort, type HostPort } from '@shared/network'
 import { isRemoteKey, isValidPackageName } from '@shared/remote'
 import { isValidCommand } from '@shared/console'
 import { LIST_SCREENSAVERS_COMMAND, READ_SCRIPT, isValidComponent, parseScreensavers, parseTweakReads, screensaverCommands } from '@shared/tweaks'
+import { HARDWARE_SCRIPT, parseHardware } from '@shared/hardware'
 import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseApkPaths, remoteApkName, type BackupItemResult } from '@shared/backup'
@@ -26,7 +27,9 @@ import type {
   ListAppsResult,
   ListFilesResult,
   ListScreensaversResult,
+  HardwareResult,
   ReadTweaksResult,
+  RestartMode,
   StorageResult,
   TrimCachesResult,
   ShellResult,
@@ -508,6 +511,27 @@ export class AdbClient {
     }
     const reason = explainInstallFailure(text)
     return { packageName, ok: false, message: reason.message, fix: reason.fix }
+  }
+
+  /** RAM, storage, uptime and processor details, read live. */
+  async readHardware(serial: string): Promise<HardwareResult> {
+    const result = await this.shell(serial, [HARDWARE_SCRIPT], 30_000)
+    if (!result.ok && result.stdout.trim() === '') {
+      const category = result.category ?? 'other'
+      const { message, fix } = explainFailure(category)
+      return { ok: false, category, message, fix, detail: (result.stderr || result.stdout).trim() }
+    }
+    return { ok: true, hardware: parseHardware(result.stdout) }
+  }
+
+  /** Restarts the TV, normally or into recovery / bootloader. The connection ends afterwards. */
+  async restart(serial: string, mode: RestartMode): Promise<ActionResult> {
+    const extra = mode === 'system' ? [] : [mode]
+    const result = await this.run(['-s', serial, 'reboot', ...extra], 30_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    // The TV may drop the connection while it goes down; that counts as success.
+    if (result.ok || /closed|disconnect|offline|no devices/i.test(text)) return { ok: true, detail: 'The TV is restarting.' }
+    return actionFail(result.category ?? 'other', 'The TV did not restart.', 'Try again, or use the TV\'s own menu or power button.', text)
   }
 
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {

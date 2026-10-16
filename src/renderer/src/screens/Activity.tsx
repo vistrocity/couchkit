@@ -5,9 +5,14 @@ import type { LogEntry } from '@shared/types'
 export function Activity(): JSX.Element {
   const [entries, setEntries] = useState<LogEntry[]>([])
   const [copied, setCopied] = useState(false)
+  const [enabled, setEnabled] = useState<boolean | null>(null)
 
   const refresh = useCallback(() => {
     void window.couchkit.listLog().then(setEntries)
+  }, [])
+
+  useEffect(() => {
+    void window.couchkit.getSettings().then((v) => setEnabled(v.activityLog))
   }, [])
 
   useEffect(() => {
@@ -29,16 +34,49 @@ export function Activity(): JSX.Element {
     }
   }
 
+  const toggle = async (on: boolean): Promise<void> => {
+    const v = await window.couchkit.setActivityLog(on)
+    setEnabled(v.activityLog)
+    refresh()
+  }
+
+  if (enabled === null) return <h2>Activity</h2>
+
+  if (!enabled) {
+    return (
+      <>
+        <h2>Activity</h2>
+        <div className="card">
+          <p>
+            <strong>The activity log is off.</strong>
+          </p>
+          <p className="muted">
+            When it is on, Couchkit keeps a list of the commands it runs on your TV. It is only useful for troubleshooting or if you are curious. The list stays in memory on this computer, is never sent anywhere, and is emptied when you close Couchkit.
+          </p>
+          <button type="button" className="primary" onClick={() => void toggle(true)}>
+            Turn on the activity log
+          </button>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <h2>Activity</h2>
-      <p className="muted">Every command Couchkit runs, newest first. This list stays on your computer.</p>
+      <p className="muted">Every command Couchkit runs from now on, newest first. This list stays on your computer and is emptied when you close Couchkit.</p>
       <p className="row">
         <button type="button" onClick={refresh}>
           Refresh
         </button>
         <button type="button" onClick={() => void copyAll()} disabled={entries.length === 0}>
           {copied ? 'Copied' : 'Copy all'}
+        </button>
+        <button type="button" onClick={() => void window.couchkit.clearLog().then(refresh)} disabled={entries.length === 0}>
+          Clear
+        </button>
+        <button type="button" onClick={() => void toggle(false)}>
+          Turn off
         </button>
       </p>
 
