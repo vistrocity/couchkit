@@ -61,7 +61,13 @@ const api: CouchkitApi = {
   listShortcuts: () => ipcRenderer.invoke('console:shortcuts-list'),
   saveShortcut: (name, command) => ipcRenderer.invoke('console:shortcuts-save', name, command),
   removeShortcut: (id) => ipcRenderer.invoke('console:shortcuts-remove', id),
-  findTvs: () => ipcRenderer.invoke('discover:find')
+  findTvs: () => ipcRenderer.invoke('discover:find'),
+  readTweaks: () => ipcRenderer.invoke('tweaks:read'),
+  applyTweak: (tweakId, choiceId) => ipcRenderer.invoke('tweaks:apply', tweakId, choiceId),
+  applyDensity: (value) => ipcRenderer.invoke('tweaks:density', value),
+  pendingChange: () => ipcRenderer.invoke('tweaks:pending'),
+  keepChange: () => ipcRenderer.invoke('tweaks:keep'),
+  undoChange: () => ipcRenderer.invoke('tweaks:undo')
 }
 
 contextBridge.exposeInMainWorld('couchkit', api)

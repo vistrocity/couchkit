@@ -70,6 +70,26 @@ if (args[0] === 'version') {
   else out('Performing Streamed Install\nSuccess')
 } else if (args[0] === '-s' && args[2] === 'uninstall') {
   out('Success')
+} else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^(settings |wm density|echo '@@)/.test(args[3])) {
+  // A tiny stateful settings emulator for the Tune-ups tests (state in FAKE_ADB_SETTINGS, a JSON file).
+  const fs = require('fs')
+  const file = process.env.FAKE_ADB_SETTINGS
+  const st = file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { settings: {}, density: { physical: 320 } }
+  fs.appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + args[3] + '\n')
+  const lines = []
+  for (const part of args[3].split('; ')) {
+    let m
+    if ((m = /^echo '(.*)'$/.exec(part))) lines.push(m[1])
+    else if ((m = /^settings get (\w+) (\w+)$/.exec(part))) lines.push(st.settings[m[1] + '.' + m[2]] ?? 'null')
+    else if ((m = /^settings put (\w+) (\w+) (.+)$/.exec(part))) st.settings[m[1] + '.' + m[2]] = m[3].replace(/^'|'$/g, '')
+    else if ((m = /^settings delete (\w+) (\w+)$/.exec(part))) delete st.settings[m[1] + '.' + m[2]]
+    else if (part === 'wm density') lines.push('Physical density: ' + st.density.physical + (st.density.override ? '\nOverride density: ' + st.density.override : ''))
+    else if (part === 'wm density reset') delete st.density.override
+    else if ((m = /^wm density (\d+)$/.exec(part))) st.density.override = Number(m[1])
+    else lines.push('Error: unknown command: ' + part)
+  }
+  if (file) fs.writeFileSync(file, JSON.stringify(st))
+  out(lines.join('\n'))
 } else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4) {
   const cmd = args[3]
   require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + cmd + '\n')

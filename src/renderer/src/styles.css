@@ -291,3 +291,11 @@ input.mono { font-size: 13px; }
 
 button.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
 button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 16%, transparent); border-color: var(--danger); }
+
+/* Tune-ups */
+.tweak { margin-bottom: 12px; }
+.tweak .row { margin-top: 8px; }
+.tweak input[type='number'] { width: 130px; }
+.content section > h3 { margin: 24px 0 10px; }
+.card.warn { margin-bottom: 14px; }
+.content > .row { margin: 4px 0 8px; }

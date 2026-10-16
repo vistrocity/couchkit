@@ -212,6 +212,19 @@ export interface FindTvsResult {
   notes: string[]
 }
 
+export type Failed = { ok: false; category: ErrorCategory; message: string; fix: string; detail: string }
+
+export type ReadTweaksResult = { ok: true; snapshot: import('./tweaks').TweakSnapshot } | Failed
+
+/** A change that will be undone automatically unless it is kept. */
+export interface PendingChange {
+  label: string
+  /** Milliseconds since 1970 when the undo happens. */
+  deadline: number
+}
+
+export type ApplyTweakResult = { ok: true; pending?: PendingChange } | Failed
+
 /** What the UI is allowed to ask the main process to do. */
 export interface CouchkitApi {
   getAppInfo(): Promise<AppInfo>
@@ -273,6 +286,16 @@ export interface CouchkitApi {
 
   /** Looks for TVs on the local network (about 4 seconds). */
   findTvs(): Promise<FindTvsResult>
+
+  readTweaks(): Promise<ReadTweaksResult>
+  applyTweak(tweakId: string, choiceId: string): Promise<ApplyTweakResult>
+  /** A number of dots per inch, or "reset" to go back to the TV's own value. */
+  applyDensity(value: number | 'reset'): Promise<ApplyTweakResult>
+  pendingChange(): Promise<PendingChange | null>
+  /** Keeps the change that is waiting to be undone. */
+  keepChange(): Promise<void>
+  /** Undoes the waiting change right now. */
+  undoChange(): Promise<ActionResult>
 }
 
 declare global {

@@ -4,6 +4,7 @@ import { basename, isAbsolute, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
 import { AdbClient, type RecordingHandle } from './adb/client'
 import { findTvs } from './discovery'
+import { TWEAKS, densityRestore, findChoice, findTweak, isValidDensity } from '@shared/tweaks'
 import { captureFileName, isRecordingPreset } from './adb/capture'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
 import { runCommand, type LogSink } from './adb/runner'
@@ -20,7 +21,10 @@ import type {
   AppInfo,
   ListAppsResult,
   FindTvsResult,
+  ApplyTweakResult,
   ListFilesResult,
+  PendingChange,
+  ReadTweaksResult,
   RecordingStatus,
   SaveRecordingResult,
   ScreenshotResult,
@@ -123,6 +127,7 @@ export function registerIpc(): void {
   })
 
   ipcMain.handle('device:disconnect', async (): Promise<void> => {
+    await revertPending()
     const adbPath = locateAdb()
     if (connected !== null && adbPath !== null) {
       await new AdbClient({ binary: adbPath, log: sink }).disconnect({
@@ -378,6 +383,97 @@ export function registerIpc(): void {
       searching = false
     }
   })
+
+  // ---- Tune-ups ----
+
+  /** A risky change (text size, rotation, density) waits here for 15 s; if not kept, it is undone. */
+  interface Pending {
+    label: string
+    deadline: number
+    restore: string[]
+    client: AdbClient
+    serial: string
+    timer: NodeJS.Timeout
+  }
+  let pending: Pending | null = null
+  const UNDO_AFTER_MS = 15_000
+
+  async function revertPending(): Promise<ActionResult> {
+    const p = pending
+    if (p === null) return { ok: true, detail: 'Nothing to undo.' }
+    clearTimeout(p.timer)
+    pending = null
+    return p.client.runSettingsCommands(p.serial, p.restore)
+  }
+
+  const holdForUndo = (label: string, restore: string[], client: AdbClient, serial: string): PendingChange => {
+    const deadline = Date.now() + UNDO_AFTER_MS
+    const timer = setTimeout(() => void revertPending(), UNDO_AFTER_MS)
+    pending = { label, deadline, restore, client, serial, timer }
+    return { label, deadline }
+  }
+
+  /** A newer change counts as keeping the one before it. */
+  const keepPending = (): void => {
+    if (pending !== null) clearTimeout(pending.timer)
+    pending = null
+  }
+
+  let quitting = false
+  app.on('before-quit', (event) => {
+    if (pending === null || quitting) return
+    // Put the TV back before the app closes, so a risky change is never left behind.
+    event.preventDefault()
+    quitting = true
+    void revertPending().finally(() => app.quit())
+  })
+
+  const tweakFailure = (message: string, fix = ''): ApplyTweakResult => ({ ok: false, category: 'other', message, fix, detail: '' })
+
+  ipcMain.handle('tweaks:read', async (): Promise<ReadTweaksResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    return s.client.readTweaks(s.serial)
+  })
+
+  ipcMain.handle('tweaks:apply', async (_event, tweakId: unknown, choiceId: unknown): Promise<ApplyTweakResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    const tweak = findTweak(tweakId)
+    const choice = tweak === undefined ? undefined : findChoice(tweak, choiceId)
+    if (tweak === undefined || choice === undefined) return tweakFailure('That setting is not known.')
+    keepPending()
+
+    let restore: string[] | null = null
+    if (tweak.restore !== undefined) {
+      const before = await s.client.readTweaks(s.serial)
+      if (!before.ok) return before
+      const state = before.snapshot.tweaks.find((t) => t.id === tweak.id)
+      restore = tweak.restore(state?.values ?? {})
+    }
+    const result = await s.client.runSettingsCommands(s.serial, choice.commands)
+    if (!result.ok) return result
+    if (restore === null) return { ok: true }
+    return { ok: true, pending: holdForUndo(`${tweak.title}: ${choice.label}`, restore, s.client, s.serial) }
+  })
+
+  ipcMain.handle('tweaks:density', async (_event, value: unknown): Promise<ApplyTweakResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    if (value !== 'reset' && !isValidDensity(value)) return tweakFailure('That density is not allowed.', 'Use a whole number between 120 and 720.')
+    keepPending()
+    const before = await s.client.readTweaks(s.serial)
+    if (!before.ok) return before
+    if (before.snapshot.density === null) return tweakFailure('This TV did not report its screen density.', 'Density cannot be changed on this TV.')
+    const restore = densityRestore(before.snapshot.density)
+    const result = await s.client.runSettingsCommands(s.serial, [value === 'reset' ? 'wm density reset' : `wm density ${value}`])
+    if (!result.ok) return result
+    return { ok: true, pending: holdForUndo(value === 'reset' ? 'Screen density: default' : `Screen density: ${value}`, restore, s.client, s.serial) }
+  })
+
+  ipcMain.handle('tweaks:pending', (): PendingChange | null => (pending === null ? null : { label: pending.label, deadline: pending.deadline }))
+  ipcMain.handle('tweaks:keep', (): void => keepPending())
+  ipcMain.handle('tweaks:undo', (): Promise<ActionResult> => revertPending())
 
   // ---- Console ----
 

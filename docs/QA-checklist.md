@@ -112,3 +112,12 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 80. With the computer on a different network than the TV (or Wi-Fi off) a plain message appears, not an error.
 81. Other devices on your network (phones, speakers) are NOT listed unless they accept connections on port 5555.
 82. On a Mac, allow "Local Network" access when macOS asks, then repeat 76-77.
+83. Tune-ups: with no TV connected it says "Connect to your TV first." After connecting, four groups appear (Speed, Display, System, Network) and the current choice in each card is highlighted blue.
+84. Animation speed: choose Fast, then Off. Open any menu on the TV; it moves faster or not at all. Choose Normal to put it back.
+85. Text size: choose Large. A banner says "keep this change? Undoing in N s". Press Keep: it stays. Choose Extra large and do nothing: after 15 seconds the TV goes back to Large by itself.
+86. Screen density: try Smaller (−20%). The TV picture shrinks; press Undo now to return it. "TV default" puts the TV's own value back.
+87. Rotate the screen: choose 90° and let the 15 seconds run out; the picture returns to normal by itself. (If the TV ignores rotation, nothing changes, which is fine.)
+88. Close Couchkit (or press Disconnect) while a change is waiting: the TV is put back first.
+89. Screen-off timeout, screensaver, location, automatic time and Private DNS: choose each option and Refresh; the highlighted choice matches what you picked. Private DNS: pick AdGuard, check the TV still opens an app that needs internet, then choose Automatic to put it back.
+90. If a setting is refused by the TV, a plain red message appears with the technical details folded below.
+

@@ -10,6 +10,7 @@ import { explainFailure } from '@shared/explain'
 import { formatHostPort, type HostPort } from '@shared/network'
 import { isRemoteKey, isValidPackageName } from '@shared/remote'
 import { isValidCommand } from '@shared/console'
+import { READ_SCRIPT, parseTweakReads } from '@shared/tweaks'
 import { isDeletablePath, isValidRemotePath, joinRemotePath, normalizeRemotePath } from '@shared/tvpath'
 import type {
   ActionResult,
@@ -20,6 +21,7 @@ import type {
   ErrorCategory,
   ListAppsResult,
   ListFilesResult,
+  ReadTweaksResult,
   ShellResult,
   TransferResult
 } from '@shared/types'
@@ -356,6 +358,30 @@ export class AdbClient {
           ? { message: explainFailure(category).message }
           : {})
     }
+  }
+
+  /** Reads every Tune-up setting in one call. */
+  async readTweaks(serial: string): Promise<ReadTweaksResult> {
+    const result = await this.shell(serial, [READ_SCRIPT], 30_000)
+    if (!result.ok && result.stdout.trim() === '') {
+      const category = result.category ?? 'other'
+      const { message, fix } = explainFailure(category)
+      return { ok: false, category, message, fix, detail: (result.stderr || result.stdout).trim() }
+    }
+    return { ok: true, snapshot: parseTweakReads(result.stdout) }
+  }
+
+  /** Runs fixed settings commands from the Tune-ups table, in one call. */
+  async runSettingsCommands(serial: string, commands: readonly string[]): Promise<ActionResult> {
+    const result = await this.shell(serial, [commands.join('; ')], 30_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (result.ok && !/exception|error|denied|not found|invalid|unknown/i.test(text)) return { ok: true, detail: 'Done.' }
+    return actionFail(
+      result.category ?? 'other',
+      'The TV did not accept that change.',
+      'Some TVs do not allow certain settings to be changed this way. The technical details below show what the TV said.',
+      text
+    )
   }
 
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {
