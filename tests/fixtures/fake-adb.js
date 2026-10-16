@@ -57,6 +57,29 @@ if (args[0] === 'version') {
   out(args[2] === 'pull' ? args[3] + ': 1 file pulled, 0 skipped. 14.2 MB/s (1536000 bytes in 0.103s)' : args[3] + ': 1 file pushed, 0 skipped. 20.0 MB/s (10 bytes in 0.001s)')
 } else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'input') {
   require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, args.slice(4).join(' ') + '\n')
+} else if (args[0] === '-s' && args[2] === 'shell' && (/^dumpsys package (?!packages)\S+$/.test(args[3] || '') || (args[3] === 'pm' && /^(grant|revoke)$/.test(args[4] || '')) || /^for p in \$\(pm list packages -3/.test(args[3] || ''))) {
+  const fs = require('fs')
+  fs.appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + args.slice(3).join(' ') + '\n')
+  const file = process.env.FAKE_ADB_PERMS
+  const st = file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { 'com.example.user': { 'android.permission.CAMERA': { granted: true }, 'android.permission.RECORD_AUDIO': { granted: false }, 'android.permission.READ_CONTACTS': { granted: true, locked: true } }, 'com.other.app': { 'android.permission.CAMERA': { granted: false } } }
+  let m
+  if ((m = /^dumpsys package (\S+)$/.exec(args[3] || ''))) {
+    const perms = st[m[1]]
+    if (!perms) { process.stdout.write('Unable to find package: ' + m[1] + '\n') }
+    else {
+      process.stdout.write('Packages:\n  Package [' + m[1] + '] (abc):\n    userId=10123\n    User 0: ceDataInode=1 installed=true\n      gids=[3003]\n      runtime permissions:\n')
+      for (const [name, v] of Object.entries(perms)) process.stdout.write('        ' + name + ': granted=' + v.granted + ', flags=[ ' + (v.locked ? 'SYSTEM_FIXED' : 'USER_SET') + ']\n')
+      process.stdout.write('    installed: true\n')
+    }
+  } else if (args[3] === 'pm') {
+    const perm = st[args[5]] && st[args[5]][args[6]]
+    if (!perm) process.stdout.write('Exception occurred while executing: java.lang.SecurityException: Unknown permission\n')
+    else { perm.granted = args[4] === 'grant'; if (file) fs.writeFileSync(file, JSON.stringify(st)) }
+  } else {
+    const want = /'([^']+): granted=true'/.exec(args[3])[1]
+    for (const [pkg, perms] of Object.entries(st)) if (perms[want] && perms[want].granted) process.stdout.write('@@holder ' + pkg + '\n')
+  }
+  process.exit(0)
 } else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'pm' && args[4] === 'list') {
   const flag = args[6]
   if (flag === '-3') out('package:com.example.user')

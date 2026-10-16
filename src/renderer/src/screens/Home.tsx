@@ -1,6 +1,7 @@
 import type { JSX } from 'react'
 import type { AdbStatus, AppInfo, DeviceInfo } from '@shared/types'
 import { ABOUT, ABOUT_LINKS } from '@shared/about'
+import markImage from '../assets/mark.png'
 import { AdbCard } from '../components/AdbCard'
 
 interface Props {
@@ -27,6 +28,8 @@ export function Home({ info, adb, onAdbChanged, onGoToConnect, onGo, connected }
   return (
     <>
       <div className="hero">
+        <img className="hero-art" src={markImage} alt="" />
+        <div className="hero-text">
         <h2>Welcome to {ABOUT.name}</h2>
         <p>
           {ABOUT.tagline} Everything runs on your computer and talks only to your TV over your home network, on{' '}
@@ -44,6 +47,7 @@ export function Home({ info, adb, onAdbChanged, onGoToConnect, onGo, connected }
             )}
           </div>
         )}
+        </div>
       </div>
 
       <AdbCard adb={adb} onChanged={onAdbChanged} />

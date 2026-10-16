@@ -164,3 +164,8 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 129. When connected, a slim strip on every page shows the TV name, model, address, Android version, screen, RAM and free storage. A "Connected to ..." pop-up appears bottom-right for 4 seconds.
 130. Problems (wrong IP, TV off) show the same orange card with "What to try" and a Copy details button.
 131. Light theme: every page is readable with every accent colour.
+132. Logo: the sidebar shows the Ck mark; the window/taskbar icon is the dark Ck tile; Home shows the TV-and-toolbox picture.
+133. Permissions: pick an app, block then allow Camera; the status changes each time. A permission marked "Fixed by the TV" has no button.
+134. Permissions: "Who can use... Camera" lists the apps you installed that have it; clicking one opens its permissions.
+135. Permissions: a core system app (for example Settings, with "Include apps that came with the TV" ticked) cannot be changed.
+136. Download adb on a computer that has none: afterwards the Home page says the file matched Google's checksum (or says it could not be checked).

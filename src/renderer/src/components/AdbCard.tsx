@@ -9,6 +9,7 @@ interface Props {
 
 /** Shows whether adb is ready, and lets the user download it. */
 export function AdbCard({ adb, onChanged }: Props): JSX.Element {
+  const [verifyNote, setVerifyNote] = useState<string | null>(null)
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -23,6 +24,7 @@ export function AdbCard({ adb, onChanged }: Props): JSX.Element {
     setBusy(false)
     setProgress(null)
     if (!result.ok) setError(result.message)
+    else setVerifyNote(result.verified === true ? "Checked against the checksum Google publishes: it matched." : "Downloaded over a secure connection, but Google's checksum could not be fetched, so it was not checked.")
     onChanged()
   }
 
@@ -49,6 +51,7 @@ export function AdbCard({ adb, onChanged }: Props): JSX.Element {
 
       {progress !== null && <ProgressBar progress={progress} />}
       {error !== null && <p className="warn">{error}</p>}
+      {verifyNote !== null && adb?.found === true && <p className="muted small">{verifyNote}</p>}
     </section>
   )
 }

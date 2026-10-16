@@ -406,3 +406,20 @@ button { transition: border-color 0.12s, filter 0.12s; }
 }
 .toast button { border: 0; background: none; padding: 0 4px; font-size: 18px; line-height: 1; cursor: pointer; color: var(--muted); }
 @keyframes toastin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.logo-img { width: 32px; height: 32px; border-radius: 8px; flex: none; }
+.hero { display: flex; align-items: center; gap: 24px; }
+.hero-text { flex: 1; min-width: 0; }
+.hero-art { width: 170px; flex: none; padding: 12px 14px; border-radius: 16px; background: #fff; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); }
+@media (max-width: 900px) { .hero-art { display: none; } }
+
+/* Permissions */
+.chips-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.pick-list { max-height: 220px; overflow: auto; margin-top: 10px; border: 1px solid var(--border); border-radius: 8px; }
+.pick { display: block; width: 100%; text-align: left; border: 0; border-radius: 0; border-bottom: 1px solid var(--border); background: transparent; padding: 7px 12px; }
+.pick:last-child { border-bottom: 0; }
+.pick.active { background: color-mix(in srgb, var(--accent) 16%, transparent); font-weight: 600; }
+.perm-row { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-top: 1px solid var(--border); }
+.perm-row > div { flex: 1; min-width: 0; }
+.perm-row > span:not(.small) { min-width: 64px; font-weight: 600; }
+.linklike { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }

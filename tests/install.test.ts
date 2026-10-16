@@ -5,6 +5,8 @@ import { mkdtemp, readdir, stat } from 'node:fs/promises'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createHash } from 'node:crypto'
+import { parsePlatformToolsArchive } from '../src/main/adb/checksum'
 import { installPlatformTools, platformToolsUrl, zipEntriesAreSafe } from '../src/main/adb/install'
 import type { DownloadProgress } from '../src/shared/types'
 import { rawZip } from './fixtures/rawzip'
@@ -156,5 +158,62 @@ describe('platformToolsUrl', () => {
     expect(platformToolsUrl('win32')).toBe('https://dl.google.com/android/repository/platform-tools-latest-windows.zip')
     expect(platformToolsUrl('darwin')).toContain('latest-darwin.zip')
     expect(platformToolsUrl('linux')).toContain('latest-linux.zip')
+  })
+})
+
+describe('checksum check', () => {
+  const sha1 = (b: Buffer): string => createHash('sha1').update(b).digest('hex')
+  const manifest = (zipName: string, hash: string, os = 'linux'): string => `<?xml version="1.0"?>
+<sdk:sdk-repository xmlns:sdk="x"><channel id="channel-0">stable</channel>
+<remotePackage path="platform-tools"><channelRef ref="channel-0"/><archives>
+<archive><complete><size>1</size><checksum type="sha1">${'0'.repeat(40)}</checksum><url>other.zip</url></complete><host-os>windows</host-os></archive>
+<archive><complete><size>${routes['/good.zip']!.body.length}</size><checksum type="sha1">${hash}</checksum><url>${zipName}</url></complete><host-os>${os}</host-os></archive>
+</archives></remotePackage></sdk:sdk-repository>`
+
+  const install = async (manifestPath: string | undefined) => {
+    const toolsDir = await mkdtemp(join(tmpdir(), 'couchkit-tools-'))
+    const outcome = await installPlatformTools({
+      url: base + '/good.zip',
+      toolsDir,
+      binaryName: 'adb',
+      allowInsecureUrl: true,
+      os: 'linux',
+      ...(manifestPath !== undefined ? { manifestUrl: base + manifestPath } : {})
+    })
+    return { toolsDir, outcome }
+  }
+
+  it('reads the right archive from the list', () => {
+    const info = parsePlatformToolsArchive(manifest('p.zip', 'a'.repeat(40)), 'linux')
+    expect(info?.url).toBe('p.zip')
+    expect(info?.hash).toEqual({ type: 'sha1', value: 'a'.repeat(40) })
+    expect(parsePlatformToolsArchive(manifest('p.zip', 'a'.repeat(40)), 'darwin')).toBeNull()
+    expect(parsePlatformToolsArchive('<nothing/>', 'linux')).toBeNull()
+    expect(parsePlatformToolsArchive(manifest('p.zip', 'short'), 'linux')).toBeNull()
+  })
+
+  it('installs and says verified when the checksum matches', async () => {
+    routes['/m-ok.xml'] = { status: 200, body: Buffer.from(manifest('good.zip', sha1(routes['/good.zip']!.body))) }
+    const { outcome } = await install('/m-ok.xml')
+    expect(outcome.ok && outcome.verified).toBe(true)
+  })
+
+  it('refuses a download whose checksum does not match, and installs nothing', async () => {
+    routes['/m-bad.xml'] = { status: 200, body: Buffer.from(manifest('good.zip', 'f'.repeat(40))) }
+    const { toolsDir, outcome } = await install('/m-bad.xml')
+    expect(outcome.ok).toBe(false)
+    if (!outcome.ok) expect(outcome.message).toContain('checksum')
+    expect(await readdir(toolsDir)).toEqual([])
+  })
+
+  it('carries on, marked unverified, when the list is missing', async () => {
+    const { outcome } = await install('/no-such-list.xml')
+    expect(outcome.ok && outcome.verified).toBe(false)
+  })
+
+  it('ignores a list entry that points somewhere other than a plain zip name', async () => {
+    routes['/m-evil.xml'] = { status: 200, body: Buffer.from(manifest('../../evil.zip', sha1(routes['/good.zip']!.body))) }
+    const { outcome } = await install('/m-evil.xml')
+    expect(outcome.ok && outcome.verified).toBe(false)
   })
 })

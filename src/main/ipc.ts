@@ -11,6 +11,7 @@ import { isValidPackageName } from '@shared/remote'
 import { clockCommands, densityRestore, findChoice, findTweak, isValidDensity } from '@shared/tweaks'
 import { captureFileName, isRecordingPreset, timeStamp } from './adb/capture'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
+import { SDK_MANIFEST_URL } from './adb/checksum'
 import { runCommand, type LogSink } from './adb/runner'
 import { platform } from './platform'
 import { ActivityLog } from './store/activity-log'
@@ -23,6 +24,8 @@ import { HistoryStore, removeEntry, renameEntry, upsertConnection } from './stor
 import { explainFailure } from '@shared/explain'
 import { parseHostPort } from '@shared/network'
 import type {
+  HoldersResult,
+  PermissionsResult,
   ActionResult,
   AdbStatus,
   ApkInstallResult,
@@ -112,13 +115,15 @@ export function registerIpc(): void {
         url: platformToolsUrl(platform.os),
         toolsDir: toolsDir(),
         binaryName: platform.toolBinaryName('adb'),
+        manifestUrl: SDK_MANIFEST_URL,
+        os: platform.os,
         onProgress: (progress) => {
           if (!event.sender.isDestroyed()) event.sender.send('adb:install-progress', progress)
         }
       })
       if (!outcome.ok) return { ok: false, message: outcome.message }
       const status = await checkAdb(outcome.adbPath, sink)
-      return { ok: status.found, message: status.message, status }
+      return { ok: status.found, message: status.message, status, verified: outcome.verified }
     } finally {
       installing = false
     }
@@ -639,6 +644,26 @@ export function registerIpc(): void {
     const s = session()
     if (!('client' in s)) return s
     return s.client.clearAppCache(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
+
+  // ---- Permissions ----
+
+  ipcMain.handle('permissions:read', async (_event, packageName: unknown): Promise<PermissionsResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    return s.client.readPermissions(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
+
+  ipcMain.handle('permissions:set', async (_event, packageName: unknown, permission: unknown, grant: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.setPermission(s.serial, typeof packageName === 'string' ? packageName : '', typeof permission === 'string' ? permission : '', grant === true)
+  })
+
+  ipcMain.handle('permissions:holders', async (_event, id: unknown): Promise<HoldersResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    return s.client.appsWithPermission(s.serial, typeof id === 'string' ? id : '')
   })
 
   // ---- Launcher helper ----

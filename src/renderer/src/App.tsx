@@ -16,7 +16,9 @@ import { Launcher } from './screens/Launcher'
 import { Ideas } from './screens/Ideas'
 import type { HardwareInfo } from '@shared/hardware'
 import { formatKb } from '@shared/cleanup'
+import ckLogo from './assets/ck.png'
 import { Icon } from './components/Icon'
+import { Permissions } from './screens/Permissions'
 import { Appearance } from './screens/Appearance'
 import { DEFAULT_ACCENT, DEFAULT_THEME, type ThemeId } from '@shared/appearance'
 
@@ -26,6 +28,7 @@ const SECTIONS = [
   { id: 'connect', label: 'Connect', icon: 'plug', group: 'Start' },
   { id: 'remote', label: 'Remote', icon: 'remote', group: 'Use your TV' },
   { id: 'apps', label: 'Apps', icon: 'grid', group: 'Use your TV' },
+  { id: 'permissions', label: 'Permissions', icon: 'shield', group: 'Use your TV' },
   { id: 'files', label: 'Files', icon: 'folder', group: 'Use your TV' },
   { id: 'capture', label: 'Capture', icon: 'camera', group: 'Use your TV' },
   { id: 'tune', label: 'Tune-ups', icon: 'sliders', group: 'Look after it' },
@@ -152,7 +155,7 @@ export function App(): JSX.Element {
     <div className="layout">
       <nav className="sidebar" aria-label="Sections">
         <h1 className="brand">
-          <span className="logo" aria-hidden="true">C</span>
+          <img className="logo-img" src={ckLogo} alt="" />
           Couchkit
         </h1>
         {GROUPS.map((group) => (
@@ -218,6 +221,7 @@ export function App(): JSX.Element {
           {section === 'launcher' && <Launcher connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'restart' && <Restart connected={connected} onGoToConnect={() => setSection('connect')} onRestarted={() => setConnected(null)} />}
           {section === 'ideas' && <Ideas />}
+          {section === 'permissions' && <Permissions connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'look' && <Appearance theme={theme} accent={accent} onChange={changeAppearance} />}
           {section === 'backup' && <Backup connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'cleanup' && <Cleanup connected={connected} onGoToConnect={() => setSection('connect')} />}

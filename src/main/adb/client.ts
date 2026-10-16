@@ -37,8 +37,11 @@ import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseApkPaths, remoteApkName, type BackupItemResult } from '@shared/backup'
 import { STORAGE_COMMAND, isProtectedPackage, parseStorage } from '@shared/cleanup'
+import { dumpPackageCommand, findCommonPermission, holdersScript, isValidPermissionName, parseHolders, parsePermissions } from '@shared/permissions'
 import { isDeletablePath, isValidRemotePath, joinRemotePath, normalizeRemotePath } from '@shared/tvpath'
 import type {
+  HoldersResult,
+  PermissionsResult,
   ActionResult,
   ApkInstallResult,
   CommandResult,
@@ -497,6 +500,68 @@ export class AdbClient {
       'Some TVs do not allow this from a computer. "Clear caches" on the Cleanup page clears every app at once, or use the app\'s own settings on the TV.',
       text
     )
+  }
+
+  /** Lists the permissions an app can be given or denied. */
+  async readPermissions(serial: string, packageName: string): Promise<PermissionsResult> {
+    if (!isValidPackageName(packageName)) return { ok: false, category: 'other', message: 'That is not a valid app name.', fix: '', detail: String(packageName).slice(0, 100) }
+    const result = await this.shell(serial, [dumpPackageCommand(packageName)], 30_000)
+    if (!result.ok) {
+      const category = result.category ?? 'other'
+      const { message, fix } = explainFailure(category)
+      return { ok: false, category, message, fix, detail: (result.stderr || result.stdout).trim() }
+    }
+    if (!/Packages:|Package \[/.test(result.stdout)) {
+      return { ok: false, category: 'other', message: 'The TV does not know an app with that name.', fix: 'Refresh the app list and try again.', detail: result.stdout.trim().slice(0, 300) }
+    }
+    return { ok: true, permissions: parsePermissions(result.stdout) }
+  }
+
+  /**
+   * Allows or blocks one permission of one app. The permission must be one the TV just listed
+   * for that app as changeable, and the app must not be a core system app.
+   */
+  async setPermission(serial: string, packageName: string, permission: string, grant: boolean): Promise<ActionResult> {
+    if (!isValidPackageName(packageName) || !isValidPermissionName(permission)) {
+      return actionFail('other', 'That is not a valid app or permission name.', '', `${String(packageName).slice(0, 80)} ${String(permission).slice(0, 80)}`)
+    }
+    if (isProtectedPackage(packageName)) {
+      return actionFail('other', 'This is a core system app, so its permissions are left alone.', 'Changing them could stop the TV from working properly.', packageName)
+    }
+    const before = await this.readPermissions(serial, packageName)
+    if (!before.ok) return before
+    const entry = before.permissions.find((p) => p.permission === permission)
+    if (entry === undefined) return actionFail('other', 'This app does not use that permission.', 'Refresh the list and try again.', permission)
+    if (entry.locked) return actionFail('other', 'The TV fixed this permission, so it cannot be changed from here.', '', permission)
+    const result = await this.shell(serial, ['pm', grant ? 'grant' : 'revoke', packageName, permission], 30_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (!result.ok || /exception|error|denied|unknown|not a changeable/i.test(text)) {
+      return actionFail(
+        result.category ?? 'other',
+        grant ? 'The TV did not allow that permission.' : 'The TV did not block that permission.',
+        'Some TVs do not let a computer change permissions. You can change it in the TV settings under Apps.',
+        text
+      )
+    }
+    const after = await this.readPermissions(serial, packageName)
+    const now = after.ok ? after.permissions.find((p) => p.permission === permission) : undefined
+    if (now !== undefined && now.granted !== grant) {
+      return actionFail('other', 'The TV accepted the command but the permission did not change.', 'Some TVs ignore this. You can change it in the TV settings under Apps.', text)
+    }
+    return { ok: true, detail: grant ? 'Allowed.' : 'Blocked.' }
+  }
+
+  /** Lists the apps you installed that currently hold one of the common permissions. */
+  async appsWithPermission(serial: string, id: string): Promise<HoldersResult> {
+    const common = findCommonPermission(id)
+    if (common === undefined) return { ok: false, category: 'other', message: 'That permission is not on the list.', fix: '', detail: String(id).slice(0, 80) }
+    const result = await this.shell(serial, [holdersScript(common.permission)], 120_000)
+    if (!result.ok) {
+      const category = result.category ?? 'other'
+      const { message, fix } = explainFailure(category)
+      return { ok: false, category, message, fix, detail: (result.stderr || result.stdout).trim() }
+    }
+    return { ok: true, packages: parseHolders(result.stdout) }
   }
 
   /** Copies one installed app's .apk files into <destRoot>/<package>/ on this computer. */

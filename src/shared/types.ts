@@ -52,6 +52,8 @@ export interface InstallResult {
   ok: boolean
   message: string
   status?: AdbStatus
+  /** True when the download matched the checksum Google publishes. */
+  verified?: boolean
 }
 
 /** Facts about a connected TV. Fields the TV does not report are left out. */
@@ -225,6 +227,10 @@ export interface PendingChange {
 
 export type ApplyTweakResult = { ok: true; pending?: PendingChange } | Failed
 
+export type PermissionsResult = { ok: true; permissions: import('./permissions').PermissionEntry[] } | Failed
+
+export type HoldersResult = { ok: true; packages: string[] } | Failed
+
 export type HardwareResult = { ok: true; hardware: import('./hardware').HardwareInfo } | Failed
 
 export interface AppSettings {
@@ -358,6 +364,9 @@ export interface CouchkitApi {
   closeBackgroundApps(): Promise<ActionResult>
   clearAppData(packageName: string): Promise<ActionResult>
   clearAppCache(packageName: string): Promise<ActionResult>
+  readPermissions(packageName: string): Promise<PermissionsResult>
+  setPermission(packageName: string, permission: string, grant: boolean): Promise<ActionResult>
+  appsWithPermission(id: string): Promise<HoldersResult>
   openApp(packageName: string): Promise<ActionResult>
   forceStopApp(packageName: string): Promise<ActionResult>
 
