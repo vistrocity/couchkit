@@ -15,6 +15,8 @@ import { runCommand, type LogSink } from './adb/runner'
 import { platform } from './platform'
 import { ActivityLog } from './store/activity-log'
 import { SettingsStore } from './store/settings'
+import { isAccent, isTheme } from '@shared/appearance'
+import { findAboutLink } from '@shared/about'
 import { findIdea } from '@shared/ideas'
 import { ShortcutStore, addShortcut, removeShortcut } from './store/shortcuts'
 import { HistoryStore, removeEntry, renameEntry, upsertConnection } from './store/history'
@@ -208,6 +210,20 @@ export function registerIpc(): void {
     logEnabled = enabled === true
     if (!logEnabled) activityLog.clear()
     return settings.save({ ...(await settings.load()), activityLog: logEnabled })
+  })
+
+  ipcMain.handle('settings:appearance', async (_event, theme: unknown, accent: unknown): Promise<AppSettings> => {
+    const current = await settings.load()
+    return settings.save({
+      ...current,
+      theme: isTheme(theme) ? theme : current.theme,
+      accent: isAccent(accent) ? accent : current.accent
+    })
+  })
+
+  ipcMain.handle('about:open', async (_event, id: unknown): Promise<void> => {
+    const link = findAboutLink(id)
+    if (link !== undefined && link.url.startsWith('https://')) await shell.openExternal(link.url)
   })
 
   ipcMain.handle('ideas:open', async (_event, id: unknown): Promise<void> => {

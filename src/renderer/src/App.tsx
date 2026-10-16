@@ -14,6 +14,8 @@ import { Backup } from './screens/Backup'
 import { Restart } from './screens/Restart'
 import { Launcher } from './screens/Launcher'
 import { Ideas } from './screens/Ideas'
+import { Appearance } from './screens/Appearance'
+import { DEFAULT_ACCENT, DEFAULT_THEME, type ThemeId } from '@shared/appearance'
 
 /** Sidebar sections. Home, Connect, Remote, Apps, Files, Capture, Tune-ups, Cleanup, Backup, Launcher, Restart, App ideas, Console and Activity work; the others come in later updates. */
 const SECTIONS = [
@@ -30,7 +32,8 @@ const SECTIONS = [
   { id: 'restart', label: 'Restart' },
   { id: 'ideas', label: 'App ideas' },
   { id: 'console', label: 'Console' },
-  { id: 'log', label: 'Activity' }
+  { id: 'log', label: 'Activity' },
+  { id: 'look', label: 'Appearance' }
 ] as const
 
 type SectionId = (typeof SECTIONS)[number]['id']
@@ -45,7 +48,35 @@ export function App(): JSX.Element {
   // Console work is kept here so it survives switching tabs. It is cleared when the TV changes or disconnects.
   const [consoleCommand, setConsoleCommand] = useState('')
   const [consoleRuns, setConsoleRuns] = useState<ConsoleRun[]>([])
+  const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME)
+  const [accent, setAccent] = useState<string>(DEFAULT_ACCENT)
   const connectedSerial = connected?.serial ?? null
+
+  useEffect(() => {
+    void window.couchkit.getSettings().then((s) => {
+      setTheme(s.theme)
+      setAccent(s.accent)
+    })
+  }, [])
+
+  // Put the chosen look on the page. "System" follows the computer's light or dark setting live.
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const apply = (): void => {
+      const dark = theme === 'dark' || (theme === 'system' && media.matches)
+      document.documentElement.dataset['theme'] = dark ? 'dark' : 'light'
+      document.documentElement.dataset['accent'] = accent
+    }
+    apply()
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [theme, accent])
+
+  const changeAppearance = (t: ThemeId, a: string): void => {
+    setTheme(t)
+    setAccent(a)
+    void window.couchkit.setAppearance(t, a)
+  }
   // The name shown for the TV: the nickname you gave it, else its model, else its address.
   const nickname = connected !== null ? history.find((h) => h.id === connected.serial)?.nickname : undefined
   const tvName = connected !== null ? (nickname ?? connected.model ?? connected.host) : ''
@@ -112,7 +143,7 @@ export function App(): JSX.Element {
 
         <main className="content">
           {section === 'home' && (
-            <Home info={info} adb={adb} onAdbChanged={refreshAdb} onGoToConnect={() => setSection('connect')} />
+            <Home info={info} adb={adb} onAdbChanged={refreshAdb} onGoToConnect={() => setSection('connect')} onGo={(id) => setSection(id as SectionId)} />
           )}
           {section === 'connect' && (
             <Connect
@@ -130,6 +161,7 @@ export function App(): JSX.Element {
           {section === 'launcher' && <Launcher connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'restart' && <Restart connected={connected} onGoToConnect={() => setSection('connect')} onRestarted={() => setConnected(null)} />}
           {section === 'ideas' && <Ideas />}
+          {section === 'look' && <Appearance theme={theme} accent={accent} onChange={changeAppearance} />}
           {section === 'backup' && <Backup connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'cleanup' && <Cleanup connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'tune' && <Tune connected={connected} onGoToConnect={() => setSection('connect')} />}

@@ -154,3 +154,9 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 122. Launcher page: "Test: press Home on the TV" presses Home on the TV and says which app opened (for example ca.dstudio.atvlauncher.pro). That launcher's card then says "Home button shows this now".
 123. After a successful Home test (valid for 10 minutes), "Turn off the stock launcher" unlocks if your own launcher answered Home. Without a test, it stays greyed on TVs that do not report the running launcher.
 
+
+## Look and Home (items 124-127)
+124. Appearance page: Light, Dark and Match my computer all change the colours straight away.
+125. Each accent colour changes buttons and highlights, in both light and dark.
+126. Close and reopen the app: your theme and accent are remembered.
+127. Home page: tiles jump to their pages; the links open the right web pages; the Help menu has two links; in the installed app the View menu has no Reload or Developer Tools.

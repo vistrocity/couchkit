@@ -1,13 +1,18 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import type { AppSettings } from '@shared/types'
+import { DEFAULT_ACCENT, DEFAULT_THEME, isAccent, isTheme } from '@shared/appearance'
 
-export const DEFAULT_SETTINGS: AppSettings = { activityLog: false }
+export const DEFAULT_SETTINGS: AppSettings = { activityLog: false, theme: DEFAULT_THEME, accent: DEFAULT_ACCENT }
 
 /** Keeps only known, well-formed values, so a damaged file can never crash the app. */
 export function sanitizeSettings(value: unknown): AppSettings {
   const v = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {}
-  return { activityLog: v['activityLog'] === true }
+  return {
+    activityLog: v['activityLog'] === true,
+    theme: isTheme(v['theme']) ? v['theme'] : DEFAULT_THEME,
+    accent: isAccent(v['accent']) ? v['accent'] : DEFAULT_ACCENT
+  }
 }
 
 export class SettingsStore {

@@ -230,6 +230,10 @@ export type HardwareResult = { ok: true; hardware: import('./hardware').Hardware
 export interface AppSettings {
   /** Whether Couchkit keeps a list of the commands it runs (off unless the person turns it on). */
   activityLog: boolean
+  /** Light, dark, or follow the computer. */
+  theme: import('./appearance').ThemeId
+  /** Accent colour id (see appearance.ts). */
+  accent: string
 }
 
 export type LauncherResult = { ok: true; status: import('./launcher').LauncherStatus } | { ok: false; message: string; fix: string; detail: string }
@@ -346,6 +350,8 @@ export interface CouchkitApi {
   clearLog(): Promise<void>
   restartTv(mode: RestartMode): Promise<ActionResult>
   openIdea(id: string): Promise<void>
+  openAboutLink(id: string): Promise<void>
+  setAppearance(theme: string, accent: string): Promise<AppSettings>
 
   readStorage(): Promise<StorageResult>
   clearCaches(): Promise<TrimCachesResult>
