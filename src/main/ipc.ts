@@ -3,6 +3,7 @@ import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, isAbsolute, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
 import { AdbClient, type RecordingHandle } from './adb/client'
+import { findTvs } from './discovery'
 import { captureFileName, isRecordingPreset } from './adb/capture'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
 import { runCommand, type LogSink } from './adb/runner'
@@ -18,6 +19,7 @@ import type {
   ApkInstallResult,
   AppInfo,
   ListAppsResult,
+  FindTvsResult,
   ListFilesResult,
   RecordingStatus,
   SaveRecordingResult,
@@ -362,6 +364,19 @@ export function registerIpc(): void {
     if (typeof path !== 'string') return
     const allowed = [join(app.getPath('pictures'), 'Couchkit'), join(app.getPath('videos'), 'Couchkit')]
     if (allowed.some((dir) => path.startsWith(dir)) && existsSync(path)) platform.revealInFolder(path)
+  })
+
+  // ---- Find my TV ----
+
+  let searching = false
+  ipcMain.handle('discover:find', async (): Promise<FindTvsResult> => {
+    if (searching) return { tvs: [], notes: ['A search is already running.'] }
+    searching = true
+    try {
+      return await findTvs()
+    } finally {
+      searching = false
+    }
   })
 
   // ---- Console ----

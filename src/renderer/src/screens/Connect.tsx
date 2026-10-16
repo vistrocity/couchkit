@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type JSX } from 'react'
-import type { AdbStatus, ConnectOutcome, DeviceInfo, HistoryEntry } from '@shared/types'
+import { Icon } from '../components/Icon'
+import type { AdbStatus, ConnectOutcome, DeviceInfo, FindTvsResult, HistoryEntry } from '@shared/types'
 import { AdbCard } from '../components/AdbCard'
 
 interface Props {
@@ -18,6 +19,8 @@ export function Connect({ adb, connected, focusToken, onAdbChanged, onConnected 
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<Failure | null>(null)
   const [history, setHistory] = useState<HistoryEntry[]>([])
+  const [searching, setSearching] = useState(false)
+  const [found, setFound] = useState<FindTvsResult | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -39,6 +42,13 @@ export function Connect({ adb, connected, focusToken, onAdbChanged, onConnected 
     } else {
       setFailure(outcome)
     }
+  }
+
+  const findTvs = async (): Promise<void> => {
+    setSearching(true)
+    setFound(null)
+    setFound(await window.couchkit.findTvs())
+    setSearching(false)
   }
 
   const submit = (event: FormEvent): void => {
@@ -78,7 +88,46 @@ export function Connect({ adb, connected, focusToken, onAdbChanged, onConnected 
         <button type="submit" className="primary" disabled={busy || !adbReady || address.trim() === ''}>
           {busy ? 'Connecting…' : 'Connect'}
         </button>
+        <button type="button" disabled={busy || searching} onClick={() => void findTvs()} title="Look for TVs on your Wi-Fi">
+          <Icon name="refresh" /> {searching ? 'Searching…' : 'Find my TV'}
+        </button>
       </form>
+
+      {searching && <p className="muted small">Looking for TVs on your Wi-Fi. This takes about 4 seconds.</p>}
+
+      {found !== null && (
+        <section className="card" aria-labelledby="found-heading">
+          <h3 id="found-heading">{found.tvs.length === 0 ? 'No TV found' : `Found ${found.tvs.length} on your network`}</h3>
+          <ul className="found-list">
+            {found.tvs.map((tv) => (
+              <li key={tv.host} className="found-row">
+                <div className="grow">
+                  <strong>{tv.name ?? 'Android device'}</strong>
+                  <div className="muted small">
+                    {tv.host} ·{' '}
+                    {tv.adbOpen ? (
+                      <span className="ok">ready to connect</span>
+                    ) : (
+                      <span className="warn">debugging is off (Settings, System, Developer options, USB debugging)</span>
+                    )}
+                  </div>
+                </div>
+                <button type="button" className={tv.adbOpen ? 'primary' : undefined} disabled={busy || !adbReady || connected?.host === tv.host} onClick={() => void connect(tv.host)}>
+                  {connected?.host === tv.host ? 'Connected ✓' : 'Connect'}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {found.notes.map((note) => (
+            <p key={note} className="muted small">
+              {note}
+            </p>
+          ))}
+          {found.tvs.length === 0 && (
+            <p className="muted small">If Windows or macOS asked whether Couchkit may use the network, choose Allow, then search again.</p>
+          )}
+        </section>
+      )}
 
       {busy && (
         <p className="muted small">

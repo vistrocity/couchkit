@@ -198,6 +198,20 @@ export interface ShellResult {
   message?: string
 }
 
+/** A TV found on the local network. */
+export interface DiscoveredTv {
+  host: string
+  /** The name the TV announces, if it announced one. */
+  name?: string
+  /** True if the TV's debugging port (5555) answered, so Couchkit can most likely connect. */
+  adbOpen: boolean
+}
+
+export interface FindTvsResult {
+  tvs: DiscoveredTv[]
+  notes: string[]
+}
+
 /** What the UI is allowed to ask the main process to do. */
 export interface CouchkitApi {
   getAppInfo(): Promise<AppInfo>
@@ -256,6 +270,9 @@ export interface CouchkitApi {
   listShortcuts(): Promise<import('./console').SavedShortcut[]>
   saveShortcut(name: string, command: string): Promise<import('./console').SavedShortcut[]>
   removeShortcut(id: string): Promise<import('./console').SavedShortcut[]>
+
+  /** Looks for TVs on the local network (about 4 seconds). */
+  findTvs(): Promise<FindTvsResult>
 }
 
 declare global {

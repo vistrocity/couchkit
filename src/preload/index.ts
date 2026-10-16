@@ -60,7 +60,8 @@ const api: CouchkitApi = {
   runShell: (command) => ipcRenderer.invoke('console:run', command),
   listShortcuts: () => ipcRenderer.invoke('console:shortcuts-list'),
   saveShortcut: (name, command) => ipcRenderer.invoke('console:shortcuts-save', name, command),
-  removeShortcut: (id) => ipcRenderer.invoke('console:shortcuts-remove', id)
+  removeShortcut: (id) => ipcRenderer.invoke('console:shortcuts-remove', id),
+  findTvs: () => ipcRenderer.invoke('discover:find')
 }
 
 contextBridge.exposeInMainWorld('couchkit', api)

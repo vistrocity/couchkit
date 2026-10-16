@@ -282,3 +282,7 @@ input.mono { font-size: 13px; }
 .recent .crumb { text-align: left; }
 
 #shortcuts-heading { margin-top: 20px; }
+
+.found-list { list-style: none; margin: 0; padding: 0; }
+.found-row { display: flex; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.found-row:last-child { border-bottom: 0; }

@@ -101,3 +101,14 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 72. Run `logcat` (it never ends): it stops after 30 seconds with a clear message.
 73. "Open Settings" opens the Settings app on the TV.
 74. On a Mac, repeat 65-73.
+
+## Slice 6 (terminal look, Find my TV) - test on a real network
+
+75. Console results show in a dark green terminal window with a title bar (couchkit@your-TV), a `$ command` line, a blinking cursor, and orange text for errors. It looks the same in light and dark mode.
+76. Connect page: "Find my TV" searches for about 4 seconds, then lists your TV with its name (if it has one) and "ready to connect".
+77. Click Connect on the found TV: it connects like typing the address.
+78. If Windows shows a firewall question the first time, choose Allow (private networks), then search again.
+79. With USB debugging turned OFF on the TV, the TV is listed with "debugging is off" and the steps to turn it on (or not listed at all, which is also acceptable).
+80. With the computer on a different network than the TV (or Wi-Fi off) a plain message appears, not an error.
+81. Other devices on your network (phones, speakers) are NOT listed unless they accept connections on port 5555.
+82. On a Mac, allow "Local Network" access when macOS asks, then repeat 76-77.
