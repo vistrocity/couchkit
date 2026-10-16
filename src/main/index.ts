@@ -1,13 +1,15 @@
-import { app, BrowserWindow, Menu, session } from 'electron'
+import { app, BrowserWindow, Menu, screen, session } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc'
 import { buildMenu } from './menu'
 import { platform } from './platform'
 
 function createWindow(): void {
+  // Open big enough to show the whole Home page without a scroll bar, but never larger than the screen.
+  const area = screen.getPrimaryDisplay().workAreaSize
   const window = new BrowserWindow({
-    width: 1000,
-    height: 680,
+    width: Math.min(1120, Math.floor(area.width * 0.92)),
+    height: Math.min(1160, Math.floor(area.height * 0.92)),
     minWidth: 760,
     minHeight: 520,
     title: 'Couchkit',

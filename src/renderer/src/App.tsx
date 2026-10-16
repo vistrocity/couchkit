@@ -224,7 +224,7 @@ export function App(): JSX.Element {
           {section === 'permissions' && <Permissions connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'look' && <Appearance theme={theme} accent={accent} onChange={changeAppearance} />}
           {section === 'backup' && <Backup connected={connected} onGoToConnect={() => setSection('connect')} />}
-          {section === 'cleanup' && <Cleanup connected={connected} onGoToConnect={() => setSection('connect')} />}
+          {section === 'cleanup' && <Cleanup connected={connected} onGoToConnect={() => setSection('connect')} onGoToApps={() => setSection('apps')} />}
           {section === 'tune' && <Tune connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'capture' && <Capture connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'console' && <Console

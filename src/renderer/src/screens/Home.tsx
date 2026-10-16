@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import type { AdbStatus, AppInfo, DeviceInfo } from '@shared/types'
 import { ABOUT, ABOUT_LINKS } from '@shared/about'
-import markImage from '../assets/mark.png'
+import markImage from '../assets/mark.svg'
 import { AdbCard } from '../components/AdbCard'
 
 interface Props {

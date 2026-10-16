@@ -169,3 +169,6 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 134. Permissions: "Who can use... Camera" lists the apps you installed that have it; clicking one opens its permissions.
 135. Permissions: a core system app (for example Settings, with "Include apps that came with the TV" ticked) cannot be changed.
 136. Download adb on a computer that has none: afterwards the Home page says the file matched Google's checksum (or says it could not be checked).
+137. Tune-ups > Private DNS: type your own DNS host name (for example dns.example.com) and press Use this DNS; the 15-second Keep/Undo banner appears. A number address such as 8.8.8.8 is refused with a clear message.
+138. Cleanup > "Clear one app's data" has a Go to Apps button.
+139. The window opens large (up to 1120 x 1160, never bigger than the screen) so Home needs little or no scrolling.

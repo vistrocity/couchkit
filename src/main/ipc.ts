@@ -8,7 +8,7 @@ import { scanBackupFolder } from './backup'
 import { KnownPaths } from './known-paths'
 import { backupFolderName, type BackupItemResult, type BackupRunResult, type BackupScan } from '@shared/backup'
 import { isValidPackageName } from '@shared/remote'
-import { clockCommands, densityRestore, findChoice, findTweak, isValidDensity } from '@shared/tweaks'
+import { clockCommands, customDnsCommands, isValidDnsHostname, densityRestore, findChoice, findTweak, isValidDensity } from '@shared/tweaks'
 import { captureFileName, isRecordingPreset, timeStamp } from './adb/capture'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
 import { SDK_MANIFEST_URL } from './adb/checksum'
@@ -540,6 +540,24 @@ export function registerIpc(): void {
     if (!result.ok) return result
     if (restore === null) return { ok: true }
     return { ok: true, pending: holdForUndo(`${tweak.title}: ${choice.label}`, restore, s.client, s.serial) }
+  })
+
+  ipcMain.handle('tweaks:custom-dns', async (_event, host: unknown): Promise<ApplyTweakResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    const name = typeof host === 'string' ? host.trim().toLowerCase() : ''
+    if (!isValidDnsHostname(name)) {
+      return tweakFailure('That is not a valid DNS host name.', 'Use a name like dns.example.com. Private DNS on Android takes a host name, not a number address.')
+    }
+    const tweak = findTweak('dns')
+    if (tweak?.restore === undefined) return tweakFailure('That setting is not known.')
+    keepPending()
+    const before = await s.client.readTweaks(s.serial)
+    if (!before.ok) return before
+    const restore = tweak.restore(before.snapshot.tweaks.find((t) => t.id === 'dns')?.values ?? {})
+    const result = await s.client.runSettingsCommands(s.serial, customDnsCommands(name))
+    if (!result.ok) return result
+    return { ok: true, pending: holdForUndo(`Private DNS: ${name}`, restore, s.client, s.serial) }
   })
 
   ipcMain.handle('tweaks:density', async (_event, value: unknown): Promise<ApplyTweakResult> => {

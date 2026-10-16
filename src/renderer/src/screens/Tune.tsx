@@ -34,6 +34,7 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
   const [pending, setPending] = useState<PendingChange | null>(null)
   const [now, setNow] = useState(Date.now())
   const [custom, setCustom] = useState('')
+  const [dnsHost, setDnsHost] = useState('')
   const [note, setNote] = useState('')
   const [savers, setSavers] = useState<ScreensaverOption[] | null>(null)
   const [clockNote, setClockNote] = useState<{ ok: boolean; text: string; fix: string } | null>(null)
@@ -94,6 +95,11 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
   const setDensity = async (value: number | 'reset'): Promise<void> => {
     setBusy(true)
     await finish(await window.couchkit.applyDensity(value))
+  }
+
+  const setCustomDns = async (): Promise<void> => {
+    setBusy(true)
+    await finish(await window.couchkit.setCustomDns(dnsHost))
   }
 
   const setSaver = async (component: string): Promise<void> => {
@@ -211,7 +217,44 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
                         </button>
                       ))}
                     </div>
-                    {snapshot !== null && active === null && <p className="muted">Currently set to something else.</p>}
+                    {snapshot !== null && active === null && (
+                      <p className="muted">
+                        {t.id === 'dns' && snapshot.tweaks.find((x) => x.id === 'dns')?.values['host']
+                          ? `Currently set to your own: ${snapshot.tweaks.find((x) => x.id === 'dns')?.values['host']}`
+                          : 'Currently set to something else.'}
+                      </p>
+                    )}
+                    {t.id === 'dns' && (
+                      <div className="subtweak">
+                        <p>
+                          <strong>Use your own DNS address</strong>
+                        </p>
+                        <p className="muted small">
+                          Type the host name of a DNS-over-TLS service, for example <code>dns.nextdns.io</code> or your own NextDNS / AdGuard address. It must be a name, not numbers. If the TV loses internet, the change is undone after 15 seconds unless you press Keep.
+                        </p>
+                        <form
+                          className="row"
+                          style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            void setCustomDns()
+                          }}
+                        >
+                          <input
+                            type="text"
+                            value={dnsHost}
+                            onChange={(e) => setDnsHost(e.target.value)}
+                            placeholder="dns.example.com"
+                            aria-label="Your own DNS host name"
+                            spellCheck={false}
+                            autoCapitalize="off"
+                          />
+                          <button type="submit" disabled={busy || dnsHost.trim() === ''}>
+                            Use this DNS
+                          </button>
+                        </form>
+                      </div>
+                    )}
                   </div>
                 )
               })}

@@ -99,3 +99,16 @@ describe('reading and applying through the fake TV', () => {
     expect(parseTweakReads("@@animations.scale\n0\n@@density\nPhysical density: 213").tweaks.find((t) => t.id === 'animations')?.choice).toBe('off')
   })
 })
+
+describe('custom private DNS', () => {
+  it('accepts host names and rejects anything else', async () => {
+    const { isValidDnsHostname, customDnsCommands, findTweak } = await import('../src/shared/tweaks')
+    for (const ok of ['dns.example.com', 'abc123.dns.nextdns.io', 'one.one.one.one']) expect(isValidDnsHostname(ok)).toBe(true)
+    for (const bad of ['', 'localhost', '8.8.8.8', 'dns.example.com; reboot', 'a b.com', '-x.com', 'x..com', 'x.com/', '$(id).com', 'a.'.repeat(130) + 'com', 42, null]) expect(isValidDnsHostname(bad)).toBe(false)
+    expect(customDnsCommands('dns.example.com')).toEqual(['settings put global private_dns_mode hostname', 'settings put global private_dns_specifier dns.example.com'])
+    // A change can always be put back.
+    const restore = findTweak('dns')!.restore!
+    expect(restore({ mode: 'hostname', host: 'dns.google' })).toEqual(['settings put global private_dns_mode hostname', 'settings put global private_dns_specifier dns.google'])
+    expect(restore({ mode: 'null', host: 'null' })).toEqual(['settings delete global private_dns_mode', 'settings delete global private_dns_specifier'])
+  })
+})

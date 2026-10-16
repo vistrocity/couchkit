@@ -74,6 +74,7 @@ const api: CouchkitApi = {
   keepChange: () => ipcRenderer.invoke('tweaks:keep'),
   undoChange: () => ipcRenderer.invoke('tweaks:undo'),
   setClockFromComputer: () => ipcRenderer.invoke('tweaks:set-clock'),
+  setCustomDns: (host) => ipcRenderer.invoke('tweaks:custom-dns', host),
   listScreensavers: () => ipcRenderer.invoke('tweaks:screensavers'),
   setScreensaver: (component) => ipcRenderer.invoke('tweaks:set-screensaver', component),
   optimiseApps: (reset) => ipcRenderer.invoke('cleanup:optimise', reset),

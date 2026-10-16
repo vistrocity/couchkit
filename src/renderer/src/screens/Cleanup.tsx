@@ -6,6 +6,7 @@ import type { ActionResult, DeviceInfo, OptimiseState } from '@shared/types'
 interface Props {
   connected: DeviceInfo | null
   onGoToConnect: () => void
+  onGoToApps: () => void
 }
 
 type Outcome = { ok: true; text: string } | { ok: false; message: string; fix: string; detail: string }
@@ -20,7 +21,7 @@ function OutcomeCard({ outcome }: { outcome: Outcome }): JSX.Element {
 const fromAction = (r: ActionResult, okText: string): Outcome =>
   r.ok ? { ok: true, text: okText } : { ok: false, message: r.message, fix: r.fix, detail: r.detail }
 
-export function Cleanup({ connected, onGoToConnect }: Props): JSX.Element {
+export function Cleanup({ connected, onGoToConnect, onGoToApps }: Props): JSX.Element {
   const [storage, setStorage] = useState<{ totalKb: number; freeKb: number } | null>(null)
   const [storageNote, setStorageNote] = useState('')
   const [busy, setBusy] = useState<'caches' | 'background' | null>(null)
@@ -206,6 +207,11 @@ export function Cleanup({ connected, onGoToConnect }: Props): JSX.Element {
         <p className="muted">
           This is done per app on the Apps page (button "Clear data"), because it deletes that app's logins and settings and cannot be undone.
         </p>
+        <div className="row">
+          <button type="button" onClick={onGoToApps}>
+            Go to Apps
+          </button>
+        </div>
       </div>
     </>
   )

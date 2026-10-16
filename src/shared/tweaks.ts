@@ -288,6 +288,7 @@ export const TWEAKS: readonly Tweak[] = [
       dnsChoice('google', 'Google', DNS_HOSTS['google'] ?? ''),
       dnsChoice('quad9', 'Quad9', DNS_HOSTS['quad9'] ?? '')
     ],
+    restore: (v) => [putOrDelete('global', 'private_dns_mode', v['mode']), putOrDelete('global', 'private_dns_specifier', v['host'])],
     detect: (v) => {
       const mode = v['mode'] ?? 'null'
       if (mode === 'null' || mode === '' || mode === 'opportunistic') return 'auto'
@@ -300,6 +301,22 @@ export const TWEAKS: readonly Tweak[] = [
     }
   }
 ]
+
+/**
+ * Android's Private DNS takes a host name (like dns.example.com), not a number address.
+ * Letters, digits, dots and hyphens only, so nothing else can ride along into a command.
+ */
+export function isValidDnsHostname(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length > 253) return false
+  const labels = value.split('.')
+  if (labels.length < 2) return false
+  if (!labels.every((l) => /^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/.test(l))) return false
+  return !/^\d+$/.test(labels[labels.length - 1] ?? '')
+}
+
+export function customDnsCommands(host: string): string[] {
+  return ['settings put global private_dns_mode hostname', `settings put global private_dns_specifier ${host}`]
+}
 
 export function findTweak(id: unknown): Tweak | undefined {
   return typeof id === 'string' ? TWEAKS.find((t) => t.id === id) : undefined

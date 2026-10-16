@@ -338,6 +338,7 @@ export interface CouchkitApi {
   undoChange(): Promise<ActionResult>
   /** Sets the TV clock to this computer's time and time zone (needs automatic time off). */
   setClockFromComputer(): Promise<ActionResult>
+  setCustomDns(host: string): Promise<ApplyTweakResult>
   listScreensavers(): Promise<ListScreensaversResult>
   setScreensaver(component: string): Promise<ActionResult>
 
