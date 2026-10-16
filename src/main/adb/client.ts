@@ -1,6 +1,7 @@
 import { explainInstallFailure } from './apk'
 import { classifyAdbFailure } from './classify'
 import { KEYCODES } from './keys'
+import { parseLs, shellQuote } from './files'
 import { VERSION_NAMES_COMMAND, buildApps, packageNameSet, parsePackageList, parseVersionNames } from './packages'
 import { buildTextArg } from './text'
 import { parseConnectOutput, parseDevices, parseGetprop, parseWmSize } from './parse'
@@ -8,6 +9,7 @@ import { runCommand, type LogSink } from './runner'
 import { explainFailure } from '@shared/explain'
 import { formatHostPort, type HostPort } from '@shared/network'
 import { isRemoteKey, isValidPackageName } from '@shared/remote'
+import { isDeletablePath, isValidRemotePath, joinRemotePath, normalizeRemotePath } from '@shared/tvpath'
 import type {
   ActionResult,
   ApkInstallResult,
@@ -15,7 +17,9 @@ import type {
   ConnectOutcome,
   DeviceInfo,
   ErrorCategory,
-  ListAppsResult
+  ListAppsResult,
+  ListFilesResult,
+  TransferResult
 } from '@shared/types'
 
 export interface AdbClientOptions {
@@ -215,6 +219,72 @@ export class AdbClient {
     )
   }
 
+  /** Lists a folder on the TV. */
+  async listFiles(serial: string, path: string): Promise<ListFilesResult> {
+    if (!isValidRemotePath(path)) {
+      return { ok: false, category: 'other', message: 'That is not a valid folder path.', fix: 'Paths on the TV start with a slash, like /sdcard/Download.', detail: String(path).slice(0, 100) }
+    }
+    const dir = normalizeRemotePath(path)
+    const result = await this.shell(serial, ['ls', '-la', shellQuote(dir === '/' ? '/' : `${dir}/`)], 30_000)
+    const text = `${result.stdout}\n${result.stderr}`
+    if (/No such file or directory/i.test(text)) {
+      return { ok: false, category: 'other', message: 'That folder does not exist on the TV.', fix: 'Go back up and pick another folder.', detail: text.trim() }
+    }
+    if (/Permission denied/i.test(text)) {
+      return { ok: false, category: 'other', message: 'The TV does not allow opening that folder.', fix: 'Folders outside the main storage are usually protected. Use Storage, Download, Movies or Pictures.', detail: text.trim() }
+    }
+    if (!result.ok && result.stdout.trim() === '') {
+      const category = result.category ?? 'other'
+      const { message, fix } = explainFailure(category)
+      return { ok: false, category, message, fix, detail: text.trim() }
+    }
+    return { ok: true, path: dir, entries: parseLs(result.stdout, dir) }
+  }
+
+  /** Copies a file or folder from the TV into a folder on this computer. */
+  async pull(serial: string, remotePath: string, localDir: string): Promise<ActionResult> {
+    if (!isValidRemotePath(remotePath)) return actionFail('other', 'That is not a valid path on the TV.', '', String(remotePath).slice(0, 100))
+    const result = await this.run(['-s', serial, 'pull', normalizeRemotePath(remotePath), localDir], 3_600_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (result.ok && /\bpulled\b/.test(text)) return { ok: true, detail: lastLine(text) }
+    return transferFailure(result.category, text, 'The file could not be copied from the TV.')
+  }
+
+  /** Copies a file or folder from this computer into a folder on the TV. */
+  async push(serial: string, localPath: string, remoteDir: string, name: string): Promise<TransferResult> {
+    if (!isValidRemotePath(remoteDir)) return { name, ok: false, message: 'That is not a valid folder on the TV.' }
+    const dir = normalizeRemotePath(remoteDir)
+    const result = await this.run(['-s', serial, 'push', localPath, dir === '/' ? '/' : `${dir}/`], 3_600_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (result.ok && /\bpushed\b/.test(text)) return { name, ok: true, message: 'Copied to the TV.' }
+    const failure = transferFailure(result.category, text, 'The file could not be copied to the TV.')
+    return { name, ok: false, message: failure.ok ? '' : failure.message, ...(failure.ok ? {} : { fix: failure.fix }) }
+  }
+
+  async makeFolder(serial: string, parent: string, name: string): Promise<ActionResult> {
+    const clean = name.trim()
+    // eslint-disable-next-line no-control-regex
+    if (clean === '' || clean.length > 200 || clean === '.' || clean === '..' || /[\/\u0000-\u001f]/.test(clean)) {
+      return actionFail('other', 'That is not a valid folder name.', 'Use letters, numbers, spaces and dashes. No slashes.', clean.slice(0, 100))
+    }
+    if (!isValidRemotePath(parent)) return actionFail('other', 'That is not a valid folder on the TV.', '', String(parent).slice(0, 100))
+    const result = await this.shell(serial, ['mkdir', shellQuote(joinRemotePath(parent, clean))])
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (result.ok && text === '') return { ok: true, detail: 'Folder created.' }
+    return actionFail('other', /exists/i.test(text) ? 'A folder with that name already exists.' : 'The TV could not create the folder.', 'Pick another name, or another location.', text)
+  }
+
+  /** Deletes a file or folder inside the TV's user storage. */
+  async remove(serial: string, path: string): Promise<ActionResult> {
+    if (!isDeletablePath(path)) {
+      return actionFail('other', 'Couchkit will not delete that.', 'Only files and folders inside Storage can be deleted, not Storage itself.', String(path).slice(0, 100))
+    }
+    const result = await this.shell(serial, ['rm', '-r', shellQuote(normalizeRemotePath(path))], 120_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (result.ok && text === '') return { ok: true, detail: 'Deleted.' }
+    return actionFail('other', 'The TV did not delete it.', 'It may be protected, or already gone. Refresh and look again.', text)
+  }
+
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {
     const serial = formatHostPort(target)
     const [props, size] = await Promise.all([
@@ -253,4 +323,27 @@ function fromCommand(result: CommandResult, okDetail: string): ActionResult {
   const category = result.category ?? 'other'
   const { message, fix } = explainFailure(category)
   return actionFail(category, message, fix, (result.stderr || result.stdout).trim())
+}
+
+function lastLine(text: string): string {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim() !== '')
+  return lines[lines.length - 1] ?? ''
+}
+
+function transferFailure(category: ErrorCategory | undefined, text: string, fallback: string): ActionResult {
+  if (/no space left|insufficient/i.test(text)) {
+    return actionFail('no_space', 'There is not enough free space.', 'Free up space on the TV (or on this computer) and try again.', text)
+  }
+  if (/permission denied|read-only file system/i.test(text)) {
+    return actionFail('other', 'The TV does not allow writing there.', 'Choose a folder inside Storage, like Download.', text)
+  }
+  if (/does not exist|no such file/i.test(text)) {
+    return actionFail('other', 'That file or folder was not found.', 'Refresh the list and try again.', text)
+  }
+  const cat = category ?? 'other'
+  if (cat !== 'other') {
+    const { message, fix } = explainFailure(cat)
+    return actionFail(cat, message, fix, text)
+  }
+  return actionFail('other', fallback, 'Open the Activity page to see the full message from the TV.', text)
 }

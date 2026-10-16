@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { ApkInstallProgress, CouchkitApi, DownloadProgress } from '@shared/types'
+import type { ApkInstallProgress, CouchkitApi, DownloadProgress, TransferProgress } from '@shared/types'
 
 /**
  * The bridge: the only things the UI is allowed to ask the main process to do.
@@ -38,7 +38,20 @@ const api: CouchkitApi = {
     }
   },
   uninstallApp: (packageName) => ipcRenderer.invoke('apps:uninstall', packageName),
-  setAppEnabled: (packageName, enabled) => ipcRenderer.invoke('apps:set-enabled', packageName, enabled)
+  setAppEnabled: (packageName, enabled) => ipcRenderer.invoke('apps:set-enabled', packageName, enabled),
+  listFiles: (path) => ipcRenderer.invoke('files:list', path),
+  downloadFromTv: (path) => ipcRenderer.invoke('files:download', path),
+  pickUploads: (kind) => ipcRenderer.invoke('files:pick', kind),
+  uploadToTv: (remoteDir, localPaths) => ipcRenderer.invoke('files:upload', remoteDir, localPaths),
+  onTransferProgress: (listener) => {
+    const handler = (_event: unknown, progress: TransferProgress): void => listener(progress)
+    ipcRenderer.on('files:progress', handler)
+    return () => {
+      ipcRenderer.removeListener('files:progress', handler)
+    }
+  },
+  makeFolder: (parent, name) => ipcRenderer.invoke('files:mkdir', parent, name),
+  deleteFromTv: (path) => ipcRenderer.invoke('files:delete', path)
 }
 
 contextBridge.exposeInMainWorld('couchkit', api)

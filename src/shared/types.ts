@@ -139,6 +139,37 @@ export interface ApkInstallProgress {
   name: string
 }
 
+/** One file or folder on the TV. */
+export interface FileEntry {
+  name: string
+  /** Full path on the TV. */
+  path: string
+  /** "link" is a shortcut to another place; it can be opened like a folder. */
+  kind: 'dir' | 'file' | 'link'
+  /** Bytes (files only). */
+  size?: number
+  /** "2026-10-16 10:03" */
+  modified?: string
+}
+
+export type ListFilesResult =
+  | { ok: true; path: string; entries: FileEntry[] }
+  | { ok: false; category: ErrorCategory; message: string; fix: string; detail: string }
+
+export interface TransferProgress {
+  /** 1-based position of the item being sent. */
+  index: number
+  total: number
+  name: string
+}
+
+export interface TransferResult {
+  name: string
+  ok: boolean
+  message: string
+  fix?: string
+}
+
 /** What the UI is allowed to ask the main process to do. */
 export interface CouchkitApi {
   getAppInfo(): Promise<AppInfo>
@@ -171,6 +202,17 @@ export interface CouchkitApi {
   onApkProgress(listener: (progress: ApkInstallProgress) => void): () => void
   uninstallApp(packageName: string): Promise<ActionResult>
   setAppEnabled(packageName: string, enabled: boolean): Promise<ActionResult>
+
+  listFiles(path: string): Promise<ListFilesResult>
+  /** Asks where to save, then copies a file or folder from the TV. Cancelling gives ok:false with category "other" and an empty message. */
+  downloadFromTv(path: string): Promise<ActionResult>
+  /** Opens the system picker for files or for a folder. Returns the chosen paths (empty if cancelled). */
+  pickUploads(kind: 'files' | 'folder'): Promise<string[]>
+  /** Copies files or folders from this computer into a folder on the TV. */
+  uploadToTv(remoteDir: string, localPaths: string[]): Promise<TransferResult[]>
+  onTransferProgress(listener: (progress: TransferProgress) => void): () => void
+  makeFolder(parent: string, name: string): Promise<ActionResult>
+  deleteFromTv(path: string): Promise<ActionResult>
 }
 
 declare global {

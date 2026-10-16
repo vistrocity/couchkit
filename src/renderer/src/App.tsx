@@ -3,10 +3,11 @@ import type { AdbStatus, AppInfo, DeviceInfo } from '@shared/types'
 import { Activity } from './screens/Activity'
 import { Connect } from './screens/Connect'
 import { Apps } from './screens/Apps'
+import { Files } from './screens/Files'
 import { Home } from './screens/Home'
 import { Remote } from './screens/Remote'
 
-/** Sidebar sections. Home, Connect, Remote, Apps and Activity work; the others come in later updates. */
+/** Sidebar sections. Home, Connect, Remote, Apps, Files and Activity work; the others come in later updates. */
 const SECTIONS = [
   { id: 'home', label: 'Home' },
   { id: 'connect', label: 'Connect' },
@@ -96,8 +97,9 @@ export function App(): JSX.Element {
           )}
           {section === 'remote' && <Remote connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'apps' && <Apps connected={connected} onGoToConnect={() => setSection('connect')} />}
+          {section === 'files' && <Files connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'log' && <Activity />}
-          {!['home', 'connect', 'remote', 'apps', 'log'].includes(section) && (
+          {!['home', 'connect', 'remote', 'apps', 'files', 'log'].includes(section) && (
             <>
               <h2>{SECTIONS.find((s) => s.id === section)?.label}</h2>
               <p className="muted">This section is not built yet.</p>

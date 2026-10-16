@@ -201,3 +201,18 @@ select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid 
 
 .check { display: flex; gap: 8px; align-items: center; margin-top: 10px; color: var(--muted); }
 .check input { width: auto; }
+
+/* Files */
+.files-page { min-height: 100%; }
+.shortcuts { margin-bottom: 8px; }
+.chip { border-radius: 999px; padding: 4px 12px; font-size: 13px; }
+.chip.active { background: color-mix(in srgb, var(--accent) 22%, transparent); border-color: var(--accent); }
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; }
+.crumb { border: 0; background: none; padding: 2px 4px; color: var(--accent); }
+.dropzone.compact { padding: 10px 14px; text-align: left; }
+.row.center { justify-content: flex-start; }
+.filelist { list-style: none; margin: 12px 0 0; padding: 0; }
+.file-row { display: flex; gap: 12px; align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.file-name { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-name:disabled { opacity: 1; cursor: default; }
+.file-meta { width: 110px; flex: none; }

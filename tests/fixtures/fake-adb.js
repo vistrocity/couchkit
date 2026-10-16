@@ -28,6 +28,18 @@ if (args[0] === 'version') {
   out('[ro.product.manufacturer]: [Google]\n[ro.product.model]: [Chromecast]\n[ro.build.version.release]: [12]\n[ro.build.version.sdk]: [31]\n[ro.build.display.id]: [STTE.220210.001]\n[ro.serialno]: [ABC123]\n[ro.empty]: []')
 } else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'wm') {
   out('Physical size: 1920x1080')
+} else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'ls') {
+  const dir = args[5]
+  if (/nope/.test(dir)) { process.stderr.write("ls: " + dir + ": No such file or directory\n"); process.exit(1) }
+  if (/locked/.test(dir)) { process.stderr.write("ls: " + dir + ": Permission denied\n"); process.exit(1) }
+  out('total 12\ndrwxrwx--x  4 root sdcard_rw 3452 2026-10-16 10:03 Android\ndrwxrwx---  2 u0_a1 media_rw 4096 2026-10-15 09:00 My Movies\n-rw-rw----  1 u0_a1 media_rw 1536000 2026-10-14 18:30 holiday video.mp4\nlrwxrwxrwx  1 root root 21 2026-01-01 00:00 link -> /storage/self/primary\n-rw-rw----  1 u0_a1 media_rw 12 2026-10-14 18:31 notes.txt')
+} else if (args[0] === '-s' && args[2] === 'shell' && (args[3] === 'mkdir' || args[3] === 'rm')) {
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, args.slice(3).join(' ') + '\n')
+  if (/exists/.test(args[4])) { process.stderr.write("mkdir: " + args[4] + ": File exists\n"); process.exit(1) }
+} else if (args[0] === '-s' && (args[2] === 'pull' || args[2] === 'push')) {
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, args.slice(2).join(' ') + '\n')
+  if (/toobig/.test(args.join(' '))) { process.stderr.write('adb: error: failed to copy: remote write failed: No space left on device\n'); process.exit(1) }
+  out(args[2] === 'pull' ? args[3] + ': 1 file pulled, 0 skipped. 14.2 MB/s (1536000 bytes in 0.103s)' : args[3] + ': 1 file pushed, 0 skipped. 20.0 MB/s (10 bytes in 0.001s)')
 } else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'input') {
   require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, args.slice(4).join(' ') + '\n')
 } else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'pm' && args[4] === 'list') {

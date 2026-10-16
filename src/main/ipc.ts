@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import { existsSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { basename, isAbsolute, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
 import { AdbClient } from './adb/client'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
@@ -16,6 +16,8 @@ import type {
   ApkInstallResult,
   AppInfo,
   ListAppsResult,
+  ListFilesResult,
+  TransferResult,
   ConnectOutcome,
   DeviceInfo,
   ErrorCategory,
@@ -220,6 +222,77 @@ export function registerIpc(): void {
     const s = session()
     if (!('client' in s)) return s
     return s.client.uninstall(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
+
+  // ---- Files ----
+
+  ipcMain.handle('files:list', async (_event, path: unknown): Promise<ListFilesResult> => {
+    const s = session()
+    if (!('client' in s)) {
+      return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    }
+    return s.client.listFiles(s.serial, typeof path === 'string' ? path : '')
+  })
+
+  ipcMain.handle('files:download', async (event, path: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    if (typeof path !== 'string') return notReady('other', 'That is not a valid path on the TV.')
+    const window = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      title: 'Choose where to save it on this computer',
+      properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'>
+    }
+    const picked = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
+    const target = picked.filePaths[0]
+    if (picked.canceled || target === undefined) {
+      // The person cancelled; the screen shows nothing for an empty message.
+      return { ok: false, category: 'other', message: '', fix: '', detail: '' }
+    }
+    return s.client.pull(s.serial, path, target)
+  })
+
+  ipcMain.handle('files:pick', async (event, kind: unknown): Promise<string[]> => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    const folder = kind === 'folder'
+    const options = {
+      title: folder ? 'Choose a folder to copy to the TV' : 'Choose files to copy to the TV',
+      properties: (folder ? ['openDirectory'] : ['openFile', 'multiSelections']) as Array<'openDirectory' | 'openFile' | 'multiSelections'>
+    }
+    const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
+    return result.canceled ? [] : result.filePaths
+  })
+
+  ipcMain.handle('files:upload', async (event, remoteDir: unknown, paths: unknown): Promise<TransferResult[]> => {
+    const list = Array.isArray(paths) ? paths.filter((p): p is string => typeof p === 'string').slice(0, 50) : []
+    const s = session()
+    const results: TransferResult[] = []
+    for (const [i, path] of list.entries()) {
+      const name = basename(path)
+      if (!('client' in s)) {
+        results.push({ name, ok: false, message: s.ok ? '' : s.message, ...(s.ok ? {} : { fix: s.fix }) })
+        continue
+      }
+      if (!isAbsolute(path) || !existsSync(path)) {
+        results.push({ name, ok: false, message: 'That file or folder could not be found on this computer.' })
+        continue
+      }
+      if (!event.sender.isDestroyed()) event.sender.send('files:progress', { index: i + 1, total: list.length, name })
+      results.push(await s.client.push(s.serial, path, typeof remoteDir === 'string' ? remoteDir : '', name))
+    }
+    return results
+  })
+
+  ipcMain.handle('files:mkdir', async (_event, parent: unknown, name: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.makeFolder(s.serial, typeof parent === 'string' ? parent : '', typeof name === 'string' ? name : '')
+  })
+
+  ipcMain.handle('files:delete', async (_event, path: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.remove(s.serial, typeof path === 'string' ? path : '')
   })
 
   ipcMain.handle(

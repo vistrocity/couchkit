@@ -56,3 +56,20 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 36. Uninstall asks to confirm; after Yes the app disappears from the list.
 37. Activity page shows each command, including install and uninstall.
 38. On a Mac, repeat 25-37 (also check that drag and drop works there).
+
+## Slice 3 (files) - test on a real TV
+
+39. Files page before connecting says "Connect to your TV first".
+40. After connecting it opens Storage (/sdcard) and lists folders first, then files, with size and date.
+41. Click a folder to open it; the path bar and "Up" work; the shortcut chips (Download, Movies, Pictures, DCIM) jump there.
+42. Names with spaces and symbols show correctly and open correctly.
+43. "Upload files..." copies a small file into the open folder; it then appears after the automatic refresh.
+44. Drag a file from File Explorer onto the page: it uploads. Also try dragging a whole folder.
+45. "Upload folder..." copies a folder with its contents.
+46. Download on a file asks where to save it, then the file appears there with the right contents.
+47. Download on a folder copies the folder and everything in it.
+48. "New folder..." creates a folder (also try a name with a space and an apostrophe).
+49. Delete asks Yes/No; Yes removes it. Storage itself and the Android folder cannot be deleted.
+50. A big file (500 MB or more) copies without freezing the app (the window shows "Copying 1 of 1...").
+51. Opening a protected folder (type nothing; click a link or go "Up" to "/") shows a plain message, not a crash.
+52. On a Mac, repeat 39-51.
