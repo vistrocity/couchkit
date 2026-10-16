@@ -1,14 +1,8 @@
-import { app, BrowserWindow, ipcMain, Menu } from 'electron'
+import { app, BrowserWindow, Menu } from 'electron'
 import { join } from 'node:path'
-import { checkAdb, findAdb } from './adb/adb'
+import { registerIpc } from './ipc'
 import { buildMenu } from './menu'
 import { platform } from './platform'
-import type { AdbStatus, AppInfo } from '@shared/types'
-
-// Activity log: slice 1 will persist this; for now it just prints in the terminal.
-const logCommand = (entry: { command: string; ok: boolean; durationMs: number }): void => {
-  console.log(`[adb] ${entry.ok ? 'ok ' : 'fail'} ${entry.durationMs}ms  ${entry.command}`)
-}
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -39,19 +33,6 @@ function createWindow(): void {
   } else {
     void window.loadFile(join(__dirname, '../renderer/index.html'))
   }
-}
-
-function registerIpc(): void {
-  ipcMain.handle('app:info', (): AppInfo => platform.appInfo())
-
-  ipcMain.handle('adb:check', async (): Promise<AdbStatus> => {
-    const adbPath = findAdb({
-      toolsDir: join(platform.dataDir(), 'tools'),
-      binaryName: platform.toolBinaryName('adb'),
-      pathEnv: process.env['PATH'] ?? ''
-    })
-    return checkAdb(adbPath, logCommand)
-  })
 }
 
 app.whenReady().then(() => {

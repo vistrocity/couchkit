@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config'
-import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
-  resolve: { alias: { '@shared': resolve(__dirname, 'src/shared') } },
+  resolve: { alias: { '@shared': fileURLToPath(new URL('./src/shared', import.meta.url)) } },
   test: { include: ['tests/**/*.test.ts'], environment: 'node' }
 })

@@ -1,7 +1,10 @@
-import { useEffect, useState, type JSX } from 'react'
-import type { AdbStatus, AppInfo } from '@shared/types'
+import { useCallback, useEffect, useState, type JSX } from 'react'
+import type { AdbStatus, AppInfo, DeviceInfo } from '@shared/types'
+import { Activity } from './screens/Activity'
+import { Connect } from './screens/Connect'
+import { Home } from './screens/Home'
 
-/** Sidebar sections. Only "Home" does something in this first slice. */
+/** Sidebar sections. Home, Connect and Activity work; the others come in later updates. */
 const SECTIONS = [
   { id: 'home', label: 'Home' },
   { id: 'connect', label: 'Connect' },
@@ -19,10 +22,30 @@ export function App(): JSX.Element {
   const [section, setSection] = useState<SectionId>('home')
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [adb, setAdb] = useState<AdbStatus | null>(null)
+  const [connected, setConnected] = useState<DeviceInfo | null>(null)
+  const [focusToken, setFocusToken] = useState(0)
+
+  const refreshAdb = useCallback(() => {
+    void window.couchkit.checkAdb().then(setAdb)
+  }, [])
 
   useEffect(() => {
     void window.couchkit.getAppInfo().then(setInfo)
-    void window.couchkit.checkAdb().then(setAdb)
+    void window.couchkit.getConnected().then(setConnected)
+    refreshAdb()
+  }, [refreshAdb])
+
+  // Cmd+K (macOS) or Ctrl+K (Windows): jump to the TV address box.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setSection('connect')
+        setFocusToken((n) => n + 1)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   return (
@@ -45,51 +68,39 @@ export function App(): JSX.Element {
         </ul>
       </nav>
 
-      <main className="content">
-        {section === 'home' ? (
-          <Home info={info} adb={adb} />
-        ) : (
-          <ComingSoon name={SECTIONS.find((s) => s.id === section)?.label ?? ''} />
-        )}
-      </main>
+      <div className="main">
+        <header className="statusbar" aria-live="polite">
+          {connected !== null ? (
+            <span className="ok">
+              ● Connected to {connected.model ?? connected.host} ({connected.host})
+            </span>
+          ) : (
+            <span className="muted">○ Not connected</span>
+          )}
+        </header>
+
+        <main className="content">
+          {section === 'home' && (
+            <Home info={info} adb={adb} onAdbChanged={refreshAdb} onGoToConnect={() => setSection('connect')} />
+          )}
+          {section === 'connect' && (
+            <Connect
+              adb={adb}
+              connected={connected}
+              focusToken={focusToken}
+              onAdbChanged={refreshAdb}
+              onConnected={setConnected}
+            />
+          )}
+          {section === 'log' && <Activity />}
+          {section !== 'home' && section !== 'connect' && section !== 'log' && (
+            <>
+              <h2>{SECTIONS.find((s) => s.id === section)?.label}</h2>
+              <p className="muted">This section is not built yet.</p>
+            </>
+          )}
+        </main>
+      </div>
     </div>
   )
-}
-
-function Home({ info, adb }: { info: AppInfo | null; adb: AdbStatus | null }): JSX.Element {
-  return (
-    <>
-      <h2>Welcome to Couchkit</h2>
-      <p className="muted">A toolbox for your Google TV or Android TV, on {osName(info)}.</p>
-
-      <section className="card" aria-labelledby="adb-heading">
-        <h3 id="adb-heading">adb (the tool that talks to your TV)</h3>
-        {adb === null ? (
-          <p>Checking…</p>
-        ) : (
-          <p className={adb.found ? 'ok' : 'warn'}>{adb.message}</p>
-        )}
-      </section>
-
-      {info && (
-        <p className="muted small">
-          Version {info.appVersion}. Shortcuts use <kbd>{info.shortcutModifier}</kbd>.
-        </p>
-      )}
-    </>
-  )
-}
-
-function ComingSoon({ name }: { name: string }): JSX.Element {
-  return (
-    <>
-      <h2>{name}</h2>
-      <p className="muted">This section is not built yet.</p>
-    </>
-  )
-}
-
-function osName(info: AppInfo | null): string {
-  if (info === null) return 'your computer'
-  return info.os === 'darwin' ? 'macOS' : info.os === 'win32' ? 'Windows' : 'Linux'
 }
