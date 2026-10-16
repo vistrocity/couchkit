@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type DragEvent, type FormEvent, type JSX } from 'react'
 import { FILE_SHORTCUTS, FILES_ROOT, breadcrumbs, formatSize, parentRemotePath, isDeletablePath } from '@shared/tvpath'
+import { Icon } from '../components/Icon'
 import type { ActionResult, DeviceInfo, FileEntry, ListFilesResult, TransferProgress, TransferResult } from '@shared/types'
 
 interface Props {
@@ -147,7 +148,7 @@ export function Files({ connected, onGoToConnect }: Props): JSX.Element {
 
       <div className="row toolbar">
         <button type="button" disabled={path === '/' || loading} onClick={() => void load(parentRemotePath(path))} title="Go up one folder">
-          ↑ Up
+          <Icon name="up" /> Up
         </button>
         <nav className="crumbs grow" aria-label="Current folder on the TV">
           <button type="button" className="crumb" onClick={() => void load('/')}>
@@ -163,7 +164,7 @@ export function Files({ connected, onGoToConnect }: Props): JSX.Element {
           ))}
         </nav>
         <button type="button" disabled={loading} onClick={() => void load(path)}>
-          {loading ? 'Loading…' : 'Refresh'}
+          <Icon name="refresh" /> {loading ? 'Loading…' : 'Refresh'}
         </button>
       </div>
 
@@ -173,13 +174,13 @@ export function Files({ connected, onGoToConnect }: Props): JSX.Element {
             <strong>Drop files or folders here</strong> to copy them into <code>{path}</code>
           </span>
           <button type="button" disabled={progress !== null} onClick={() => void window.couchkit.pickUploads('files').then(upload)}>
-            Upload files…
+            <Icon name="fileUp" /> Upload files…
           </button>
           <button type="button" disabled={progress !== null} onClick={() => void window.couchkit.pickUploads('folder').then(upload)}>
-            Upload folder…
+            <Icon name="folderUp" /> Upload folder…
           </button>
           <button type="button" onClick={() => setCreating(true)}>
-            New folder…
+            <Icon name="folderPlus" /> New folder…
           </button>
         </div>
         {progress !== null && (
@@ -257,7 +258,10 @@ export function Files({ connected, onGoToConnect }: Props): JSX.Element {
         {(entries ?? []).map((entry) => (
           <li key={entry.path} className="file-row">
             <button type="button" className="file-name" disabled={entry.kind === 'file'} onClick={() => open(entry)}>
-              <span aria-hidden="true">{entry.kind === 'file' ? '📄' : '📁'}</span> {entry.name}
+              <span className={entry.kind === 'file' ? 'entry-icon' : 'entry-icon folder'}>
+                <Icon name={entry.kind === 'file' ? 'file' : 'folder'} size={18} />
+              </span>{' '}
+              {entry.name}
               {entry.kind === 'link' ? ' ↪' : ''}
             </button>
             <span className="muted small file-meta">{entry.size !== undefined ? formatSize(entry.size) : ''}</span>
@@ -275,10 +279,10 @@ export function Files({ connected, onGoToConnect }: Props): JSX.Element {
             ) : (
               <div className="row">
                 <button type="button" disabled={busyAction !== null} onClick={() => void run('download', () => window.couchkit.downloadFromTv(entry.path), false)}>
-                  {busyAction === 'download' ? 'Copying…' : 'Download'}
+                  <Icon name="download" /> {busyAction === 'download' ? 'Copying…' : 'Download'}
                 </button>
                 <button type="button" disabled={busyAction !== null || !isDeletablePath(entry.path)} title={isDeletablePath(entry.path) ? 'Delete' : 'Protected'} onClick={() => setConfirmDelete(entry.path)}>
-                  Delete
+                  <Icon name="trash" /> Delete
                 </button>
               </div>
             )}

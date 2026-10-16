@@ -1,8 +1,9 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
-import { existsSync } from 'node:fs'
+import { BrowserWindow, app, dialog, ipcMain } from 'electron'
+import { existsSync, mkdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, isAbsolute, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
-import { AdbClient } from './adb/client'
+import { AdbClient, type RecordingHandle } from './adb/client'
+import { captureFileName, isRecordingPreset } from './adb/capture'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
 import { runCommand, type LogSink } from './adb/runner'
 import { platform } from './platform'
@@ -17,6 +18,9 @@ import type {
   AppInfo,
   ListAppsResult,
   ListFilesResult,
+  RecordingStatus,
+  SaveRecordingResult,
+  ScreenshotResult,
   TransferResult,
   ConnectOutcome,
   DeviceInfo,
@@ -293,6 +297,68 @@ export function registerIpc(): void {
     const s = session()
     if (!('client' in s)) return s
     return s.client.remove(s.serial, typeof path === 'string' ? path : '')
+  })
+
+  // ---- Capture ----
+
+  const captureDir = (kind: 'screenshot' | 'recording'): string => {
+    const dir = join(app.getPath(kind === 'screenshot' ? 'pictures' : 'videos'), 'Couchkit')
+    mkdirSync(dir, { recursive: true })
+    return dir
+  }
+
+  let recording: { client: AdbClient; serial: string; handle: RecordingHandle; startedAt: number; ended: boolean } | null = null
+
+  ipcMain.handle('capture:screenshot', async (): Promise<ScreenshotResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, category: s.ok ? 'other' : s.category, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    const file = join(captureDir('screenshot'), captureFileName('screenshot', new Date()))
+    const result = await s.client.screenshot(s.serial, file)
+    if (!result.ok) return result
+    // A small copy for the window. Very large pictures are shown only as a saved file.
+    const size = statSync(file).size
+    const dataUrl = size <= 15_000_000 ? `data:image/png;base64,${readFileSync(file).toString('base64')}` : ''
+    return { ok: true, path: file, dataUrl }
+  })
+
+  ipcMain.handle('capture:record-start', async (_event, preset: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    if (recording !== null) return notReady('other', 'A recording is already running. Stop it first.')
+    const chosen = isRecordingPreset(preset) ? preset : 'small'
+    const handle = s.client.startRecording(s.serial, chosen)
+    const current = { client: s.client, serial: s.serial, handle, startedAt: Date.now(), ended: false }
+    recording = current
+    void handle.done.then(() => {
+      current.ended = true
+    })
+    return { ok: true, detail: 'Recording started.' }
+  })
+
+  ipcMain.handle('capture:record-status', (): RecordingStatus => {
+    if (recording === null) return { state: 'idle' }
+    return { state: recording.ended ? 'ended' : 'recording', startedAt: recording.startedAt }
+  })
+
+  ipcMain.handle('capture:record-stop', async (): Promise<SaveRecordingResult> => {
+    const current = recording
+    if (current === null) {
+      const { message, fix } = explainFailure('other')
+      return { ok: false, category: 'other', message: 'No recording is running.', fix, detail: message }
+    }
+    try {
+      const file = join(captureDir('recording'), captureFileName('recording', new Date(current.startedAt)))
+      const result = await current.client.finishRecording(current.serial, current.handle, file)
+      return result.ok ? { ok: true, path: file } : result
+    } finally {
+      recording = null
+    }
+  })
+
+  ipcMain.handle('capture:reveal', (_event, path: unknown): void => {
+    if (typeof path !== 'string') return
+    const allowed = [join(app.getPath('pictures'), 'Couchkit'), join(app.getPath('videos'), 'Couchkit')]
+    if (allowed.some((dir) => path.startsWith(dir)) && existsSync(path)) platform.revealInFolder(path)
   })
 
   ipcMain.handle(

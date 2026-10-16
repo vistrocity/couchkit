@@ -216,3 +216,15 @@ select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid 
 .file-name { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .file-name:disabled { opacity: 1; cursor: default; }
 .file-meta { width: 110px; flex: none; }
+
+.icon { vertical-align: -3px; flex: none; }
+button .icon { margin-right: 2px; }
+.entry-icon { color: var(--muted); }
+.entry-icon.folder { color: #e0a82e; }
+
+/* Capture */
+.capture-card { max-width: 620px; }
+.capture-card + .capture-card { margin-top: 12px; }
+.shot { display: block; max-width: 100%; max-height: 360px; margin-top: 12px; border-radius: 8px; border: 1px solid var(--border); }
+.rec-dot { color: #ef4444; animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: 0.25; } }

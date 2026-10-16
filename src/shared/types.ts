@@ -170,6 +170,21 @@ export interface TransferResult {
   fix?: string
 }
 
+export type CaptureFailure = { ok: false; category: ErrorCategory; message: string; fix: string; detail: string }
+
+export type ScreenshotResult =
+  | { ok: true; /** Where the picture was saved on this computer. */ path: string; /** A small copy for showing in the window ("" if too big). */ dataUrl: string }
+  | CaptureFailure
+
+export type SaveRecordingResult = { ok: true; path: string } | CaptureFailure
+
+export interface RecordingStatus {
+  /** "ended" means the TV stopped by itself (time limit or an error) and the video is not saved yet. */
+  state: 'idle' | 'recording' | 'ended'
+  /** Milliseconds since 1970. */
+  startedAt?: number
+}
+
 /** What the UI is allowed to ask the main process to do. */
 export interface CouchkitApi {
   getAppInfo(): Promise<AppInfo>
@@ -213,6 +228,15 @@ export interface CouchkitApi {
   onTransferProgress(listener: (progress: TransferProgress) => void): () => void
   makeFolder(parent: string, name: string): Promise<ActionResult>
   deleteFromTv(path: string): Promise<ActionResult>
+
+  takeScreenshot(): Promise<ScreenshotResult>
+  /** preset: "small" (720p, smaller file) or "full" (the TV's own resolution). */
+  startRecording(preset: string): Promise<ActionResult>
+  recordingStatus(): Promise<RecordingStatus>
+  /** Stops the recording and saves the video on this computer. */
+  stopRecording(): Promise<SaveRecordingResult>
+  /** Shows a saved screenshot or video in the system file manager. */
+  revealCapture(path: string): Promise<void>
 }
 
 declare global {

@@ -36,7 +36,21 @@ if (args[0] === 'version') {
 } else if (args[0] === '-s' && args[2] === 'shell' && (args[3] === 'mkdir' || args[3] === 'rm')) {
   require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, args.slice(3).join(' ') + '\n')
   if (/exists/.test(args[4])) { process.stderr.write("mkdir: " + args[4] + ": File exists\n"); process.exit(1) }
+} else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'screencap') {
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'screencap ' + args.slice(4).join(' ') + '\n')
+} else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'screenrecord') {
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'screenrecord ' + args.slice(4).join(' ') + '\n')
+  if (process.env.FAKE_ADB_RECFAIL) { process.stderr.write('ERROR: unable to configure encoder\n'); process.exit(1) }
+  const stop = process.env.FAKE_ADB_STOPFILE
+  const t = setInterval(() => { if (!stop || require('fs').existsSync(stop)) { clearInterval(t); process.exit(0) } }, 30)
+} else if (args[0] === '-s' && args[2] === 'shell' && /^kill/.test(args[3] || '')) {
+  if (process.env.FAKE_ADB_STOPFILE) require('fs').writeFileSync(process.env.FAKE_ADB_STOPFILE, 'stop')
 } else if (args[0] === '-s' && (args[2] === 'pull' || args[2] === 'push')) {
+  if (args[2] === 'pull' && /couchkit-shot/.test(args[3])) require('fs').writeFileSync(args[4], Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'))
+  if (args[2] === 'pull' && /couchkit-rec/.test(args[3])) {
+    if (process.env.FAKE_ADB_RECFAIL) { process.stderr.write("adb: error: failed to stat remote object '" + args[3] + "': No such file or directory\n"); process.exit(1) }
+    require('fs').writeFileSync(args[4], 'fake mp4')
+  }
   require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, args.slice(2).join(' ') + '\n')
   if (/toobig/.test(args.join(' '))) { process.stderr.write('adb: error: failed to copy: remote write failed: No space left on device\n'); process.exit(1) }
   out(args[2] === 'pull' ? args[3] + ': 1 file pulled, 0 skipped. 14.2 MB/s (1536000 bytes in 0.103s)' : args[3] + ': 1 file pushed, 0 skipped. 20.0 MB/s (10 bytes in 0.001s)')

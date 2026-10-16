@@ -36,6 +36,13 @@ export interface AdbClientOptions {
   sleep?: (ms: number) => Promise<void>
 }
 
+const SHOT_REMOTE = '/data/local/tmp/couchkit-shot.png'
+const REC_REMOTE = '/data/local/tmp/couchkit-rec.mp4'
+
+export interface RecordingHandle {
+  done: Promise<CommandResult>
+}
+
 const realSleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 /** Everything the app asks adb to do about connecting to a TV. */
@@ -283,6 +290,45 @@ export class AdbClient {
     const text = `${result.stdout}\n${result.stderr}`.trim()
     if (result.ok && text === '') return { ok: true, detail: 'Deleted.' }
     return actionFail('other', 'The TV did not delete it.', 'It may be protected, or already gone. Refresh and look again.', text)
+  }
+
+  /** Takes a screenshot and saves it as `localPath` on this computer. */
+  async screenshot(serial: string, localPath: string): Promise<ActionResult> {
+    const cap = await this.shell(serial, ['screencap', '-p', SHOT_REMOTE], 30_000)
+    if (!cap.ok) return fromCommand(cap, '')
+    const pull = await this.run(['-s', serial, 'pull', SHOT_REMOTE, localPath], 60_000)
+    await this.shell(serial, ['rm', '-f', SHOT_REMOTE])
+    const text = `${pull.stdout}\n${pull.stderr}`.trim()
+    if (pull.ok && /\bpulled\b/.test(text)) return { ok: true, detail: 'Saved.' }
+    return transferFailure(pull.category, text, 'The screenshot could not be copied from the TV.')
+  }
+
+  /**
+   * Starts recording the TV screen. Returns at once; `done` finishes when the TV stops
+   * (after the 3 minute limit Android applies, or when finishRecording is called).
+   */
+  startRecording(serial: string, preset: 'small' | 'full'): RecordingHandle {
+    const sizeArgs = preset === 'small' ? ['--size', '1280x720', '--bit-rate', '4000000'] : []
+    const done = this.run(['-s', serial, 'shell', 'screenrecord', '--time-limit', '180', ...sizeArgs, REC_REMOTE], 200_000)
+    return { done }
+  }
+
+  /** Stops a recording, copies the video to `localPath`, and cleans up on the TV. */
+  async finishRecording(serial: string, handle: RecordingHandle, localPath: string): Promise<ActionResult> {
+    // Ctrl+C for the recorder on the TV: it then finishes writing a playable file.
+    await this.shell(serial, ['kill -2 $(pidof screenrecord)'])
+    const ended = await handle.done
+    const pull = await this.run(['-s', serial, 'pull', REC_REMOTE, localPath], 600_000)
+    await this.shell(serial, ['rm', '-f', REC_REMOTE])
+    const pullText = `${pull.stdout}\n${pull.stderr}`.trim()
+    if (pull.ok && /\bpulled\b/.test(pullText)) return { ok: true, detail: 'Saved.' }
+    const recorderText = `${ended.stdout}\n${ended.stderr}`.trim()
+    return actionFail(
+      'other',
+      'The TV did not produce a recording.',
+      'Some TVs do not allow screen recording. Protected apps (such as streaming services) also block it.',
+      recorderText !== '' ? recorderText : pullText
+    )
   }
 
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {

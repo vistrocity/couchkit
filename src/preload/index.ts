@@ -51,7 +51,12 @@ const api: CouchkitApi = {
     }
   },
   makeFolder: (parent, name) => ipcRenderer.invoke('files:mkdir', parent, name),
-  deleteFromTv: (path) => ipcRenderer.invoke('files:delete', path)
+  deleteFromTv: (path) => ipcRenderer.invoke('files:delete', path),
+  takeScreenshot: () => ipcRenderer.invoke('capture:screenshot'),
+  startRecording: (preset) => ipcRenderer.invoke('capture:record-start', preset),
+  recordingStatus: () => ipcRenderer.invoke('capture:record-status'),
+  stopRecording: () => ipcRenderer.invoke('capture:record-stop'),
+  revealCapture: (path) => ipcRenderer.invoke('capture:reveal', path)
 }
 
 contextBridge.exposeInMainWorld('couchkit', api)

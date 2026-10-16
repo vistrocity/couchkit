@@ -73,3 +73,17 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 50. A big file (500 MB or more) copies without freezing the app (the window shows "Copying 1 of 1...").
 51. Opening a protected folder (type nothing; click a link or go "Up" to "/") shows a plain message, not a crash.
 52. On a Mac, repeat 39-51.
+
+## Slice 4 (capture, and icons on Files) - test on a real TV
+
+53. Files page: the buttons (Up, Refresh, Upload files, Upload folder, New folder, Download, Delete) show a small icon, and folders and files have icons in the list.
+54. Capture page before connecting says "Connect to your TV first".
+55. "Take screenshot" saves a PNG in Pictures > Couchkit and shows a preview; "Show in folder" opens it.
+56. Screenshot while a normal app or the home screen is shown looks correct (not black).
+57. Screenshot while a streaming app plays protected video: it may be black. That is expected, not a bug.
+58. "Start recording" (720p) shows a red dot and a running timer; the TV keeps working normally.
+59. "Stop and save" after about 10 seconds saves an MP4 in Videos > Couchkit; it plays on your computer with the right picture.
+60. Try "TV's own resolution". The file is bigger but plays.
+61. Let a recording run past 3 minutes: the page says "Stopped by the TV after 3:00" and "Save recording" still saves it.
+62. If your TV does not allow recording, a plain message appears with technical details (send me the Activity log).
+63. On a Mac, repeat 54-61 (the folders are Pictures/Couchkit and Movies/Couchkit).
