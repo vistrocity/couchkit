@@ -122,8 +122,8 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
         <section className="remote-body" aria-label="Remote control">
           <div className="power-row">
             {confirmPower ? (
-              <div className="row">
-                <span className="small">Turn the TV on or off?</span>
+              <div className="confirm-power">
+                <span className="small">Toggle power?</span>
                 <button
                   type="button"
                   className="primary"
@@ -135,12 +135,15 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
                   Yes
                 </button>
                 <button type="button" onClick={() => setConfirmPower(false)}>
-                  Cancel
+                  No
                 </button>
               </div>
             ) : (
               <button type="button" className="rbtn power" title="Power" aria-label="Power" onClick={() => setConfirmPower(true)}>
-                ⏻
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+                  <path d="M12 3v9" />
+                  <path d="M6.3 6.8a8 8 0 1 0 11.4 0" />
+                </svg>
               </button>
             )}
           </div>
