@@ -155,7 +155,7 @@ export function App(): JSX.Element {
 
         <main className="content">
           {section === 'home' && (
-            <Home info={info} adb={adb} onAdbChanged={refreshAdb} onGoToConnect={() => setSection('connect')} onGo={(id) => setSection(id as SectionId)} />
+            <Home info={info} adb={adb} onAdbChanged={refreshAdb} onGoToConnect={() => setSection('connect')} onGo={(id) => setSection(id as SectionId)} connected={connected} tvName={tvName} />
           )}
           {section === 'connect' && (
             <Connect

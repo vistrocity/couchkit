@@ -1,3 +1,4 @@
+import { ErrorCard } from '../components/ErrorCard'
 import { useCallback, useEffect, useState, type DragEvent, type FormEvent, type JSX } from 'react'
 import { FILE_SHORTCUTS, FILES_ROOT, breadcrumbs, formatSize, parentRemotePath, isDeletablePath } from '@shared/tvpath'
 import { Icon } from '../components/Icon'
@@ -238,18 +239,7 @@ export function Files({ connected, onGoToConnect }: Props): JSX.Element {
       )}
 
       {listFailure !== null && (
-        <div className="card error" role="alert">
-          <p>
-            <strong>{listFailure.message}</strong>
-          </p>
-          <p>{listFailure.fix}</p>
-          {listFailure.detail !== '' && (
-            <details>
-              <summary>Technical details</summary>
-              <pre>{listFailure.detail}</pre>
-            </details>
-          )}
-        </div>
+        <ErrorCard message={listFailure.message} fix={listFailure.fix} detail={listFailure.detail} />
       )}
 
       {entries !== null && entries.length === 0 && listFailure === null && <p className="muted">This folder is empty.</p>}

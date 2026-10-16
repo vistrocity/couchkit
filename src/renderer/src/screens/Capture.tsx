@@ -1,3 +1,4 @@
+import { ErrorCard } from '../components/ErrorCard'
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { Icon } from '../components/Icon'
 import type { CaptureFailure, DeviceInfo, RecordingStatus } from '@shared/types'
@@ -20,18 +21,7 @@ function formatClock(ms: number): string {
 
 function FailureCard({ failure }: { failure: CaptureFailure }): JSX.Element {
   return (
-    <div className="card error" role="alert">
-      <p>
-        <strong>{failure.message}</strong>
-      </p>
-      {failure.fix !== '' && <p>{failure.fix}</p>}
-      {failure.detail !== '' && (
-        <details>
-          <summary>Technical details</summary>
-          <pre>{failure.detail}</pre>
-        </details>
-      )}
-    </div>
+    <ErrorCard message={failure.message} fix={failure.fix} detail={failure.detail} />
   )
 }
 

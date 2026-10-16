@@ -1,3 +1,4 @@
+import { ErrorCard } from '../components/ErrorCard'
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { TWEAKS, MIN_DENSITY, MAX_DENSITY, isValidDensity, type Tweak, type TweakGroup, type TweakSnapshot, type ScreensaverOption } from '@shared/tweaks'
 import type { ApplyTweakResult, DeviceInfo, PendingChange } from '@shared/types'
@@ -169,18 +170,7 @@ export function Tune({ connected, onGoToConnect }: Props): JSX.Element {
       {note !== '' && <p className="muted">{note}</p>}
 
       {error !== null && (
-        <div className="card error" role="alert">
-          <p>
-            <strong>{error.message}</strong>
-          </p>
-          {error.fix !== '' && <p>{error.fix}</p>}
-          {error.detail !== '' && (
-            <details>
-              <summary>Technical details</summary>
-              <pre>{error.detail}</pre>
-            </details>
-          )}
-        </div>
+        <ErrorCard message={error.message} fix={error.fix} detail={error.detail} />
       )}
 
       <div className="row">

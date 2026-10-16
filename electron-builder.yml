@@ -2,10 +2,13 @@ appId: app.couchkit.desktop
 productName: Couchkit
 directories:
   output: dist
+  buildResources: build
 files:
   - out/**
+  - build/icon.png
   - package.json
 mac:
+  icon: build/icon.png
   category: public.app-category.utilities
   target:
     - target: dmg
@@ -13,6 +16,7 @@ mac:
     - target: zip
       arch: [x64, arm64]
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]

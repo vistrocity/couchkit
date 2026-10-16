@@ -1,3 +1,4 @@
+import { ErrorCard } from '../components/ErrorCard'
 import { useCallback, useEffect, useRef, useState, type FormEvent, type JSX } from 'react'
 import { Icon } from '../components/Icon'
 import { formatKb } from '@shared/cleanup'
@@ -136,16 +137,7 @@ export function Connect({ adb, connected, focusToken, onAdbChanged, onConnected,
       )}
 
       {failure !== null && (
-        <div className="card error" role="alert">
-          <strong>{failure.message}</strong>
-          <p>{failure.fix}</p>
-          {failure.detail !== '' && (
-            <details>
-              <summary className="small">Technical details</summary>
-              <pre>{failure.detail}</pre>
-            </details>
-          )}
-        </div>
+        <ErrorCard message={failure.message} fix={failure.fix} detail={failure.detail} />
       )}
 
       {connected !== null && <DeviceCard device={connected} onDisconnect={() => void disconnect()} />}

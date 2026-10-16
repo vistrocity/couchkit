@@ -11,6 +11,7 @@ function createWindow(): void {
     minWidth: 760,
     minHeight: 520,
     title: 'Couchkit',
+    icon: join(__dirname, '../../build/icon.png'),
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

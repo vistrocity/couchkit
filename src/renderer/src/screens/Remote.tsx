@@ -1,3 +1,4 @@
+import { ErrorCard } from '../components/ErrorCard'
 import { useCallback, useEffect, useState, type FormEvent, type JSX } from 'react'
 import type { ActionResult, DeviceInfo } from '@shared/types'
 
@@ -104,18 +105,7 @@ export function Remote({ connected, onGoToConnect }: Props): JSX.Element {
       </p>
 
       {failure !== null && (
-        <div className="card error" role="alert">
-          <p>
-            <strong>{failure.message}</strong>
-          </p>
-          {failure.fix !== '' && <p>{failure.fix}</p>}
-          {failure.detail !== '' && (
-            <details>
-              <summary>Technical details</summary>
-              <pre>{failure.detail}</pre>
-            </details>
-          )}
-        </div>
+        <ErrorCard message={failure.message} fix={failure.fix} detail={failure.detail} />
       )}
 
       <div className="remote-layout">

@@ -1,3 +1,4 @@
+import { ErrorCard } from '../components/ErrorCard'
 import { useCallback, useEffect, useMemo, useState, type DragEvent, type JSX } from 'react'
 import type { ActionResult, ApkInstallProgress, ApkInstallResult, AppPackage, DeviceInfo, ListAppsResult } from '@shared/types'
 
@@ -196,12 +197,7 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
       </div>
 
       {listFailure !== null && (
-        <div className="card error" role="alert">
-          <p>
-            <strong>{listFailure.message}</strong>
-          </p>
-          <p>{listFailure.fix}</p>
-        </div>
+        <ErrorCard message={listFailure.message} fix={listFailure.fix} />
       )}
 
       {apps !== null && (

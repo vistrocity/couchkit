@@ -1,3 +1,4 @@
+import { ErrorCard } from '../components/ErrorCard'
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { formatKb } from '@shared/cleanup'
 import type { ActionResult, DeviceInfo, OptimiseState } from '@shared/types'
@@ -12,18 +13,7 @@ type Outcome = { ok: true; text: string } | { ok: false; message: string; fix: s
 function OutcomeCard({ outcome }: { outcome: Outcome }): JSX.Element {
   if (outcome.ok) return <p className="muted">{outcome.text}</p>
   return (
-    <div className="card error" role="alert">
-      <p>
-        <strong>{outcome.message}</strong>
-      </p>
-      {outcome.fix !== '' && <p>{outcome.fix}</p>}
-      {outcome.detail !== '' && (
-        <details>
-          <summary>Technical details</summary>
-          <pre>{outcome.detail}</pre>
-        </details>
-      )}
-    </div>
+    <ErrorCard message={outcome.message} fix={outcome.fix} detail={outcome.detail} />
   )
 }
 

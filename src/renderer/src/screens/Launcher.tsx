@@ -1,3 +1,4 @@
+import { ErrorCard } from '../components/ErrorCard'
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { STOCK_LAUNCHER_PACKAGES, type LauncherStatus } from '@shared/launcher'
 import type { ActionResult, DeviceInfo } from '@shared/types'
@@ -76,18 +77,7 @@ export function Launcher({ connected, onGoToConnect }: Props): JSX.Element {
       </p>
 
       {error !== null && (
-        <div className="card error" role="alert">
-          <p>
-            <strong>{error.message}</strong>
-          </p>
-          {error.fix !== '' && <p>{error.fix}</p>}
-          {error.detail !== '' && (
-            <details>
-              <summary>Technical details</summary>
-              <pre>{error.detail}</pre>
-            </details>
-          )}
-        </div>
+        <ErrorCard message={error.message} fix={error.fix} detail={error.detail} />
       )}
       {note !== '' && <p className="muted">{note}</p>}
 
