@@ -9,6 +9,13 @@ files:
   - package.json
 mac:
   icon: build/icon.png
+  extendInfo:
+    NSLocalNetworkUsageDescription: Couchkit looks for Android TVs and Google TVs on your home network and talks to them to run the tools you choose.
+    NSBonjourServices:
+      - _adb._tcp
+      - _adb-tls-connect._tcp
+      - _adb-tls-pairing._tcp
+      - _androidtvremote2._tcp
   category: public.app-category.utilities
   target:
     - target: dmg

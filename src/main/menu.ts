@@ -28,7 +28,9 @@ export function buildMenu(): Menu {
   } else {
     template.push({ label: 'File', submenu: [{ role: 'quit' }] })
   }
-  template.push({ label: 'View', submenu: view }, help)
+  template.push({ label: 'View', submenu: view })
+  if (platform.isMac) template.push({ role: 'windowMenu' })
+  template.push(help)
 
   return Menu.buildFromTemplate(template)
 }

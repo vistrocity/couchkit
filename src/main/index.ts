@@ -41,6 +41,8 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // macOS shows the Dock icon from the app bundle when installed; when run from source, set it here.
+  if (platform.isMac && !app.isPackaged) app.dock?.setIcon(join(__dirname, '../../build/icon.png'))
   // Couchkit never needs the camera, microphone, location and so on: refuse every permission request.
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
   session.defaultSession.setPermissionCheckHandler(() => false)
