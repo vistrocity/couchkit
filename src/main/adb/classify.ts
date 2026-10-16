@@ -7,7 +7,7 @@ import type { ErrorCategory } from '@shared/types'
 export function classifyAdbFailure(output: string): ErrorCategory {
   const text = output.toLowerCase()
 
-  if (text.includes('unauthorized')) return 'unauthorized'
+  if (text.includes('unauthorized') || text.includes('failed to authenticate')) return 'unauthorized'
   if (text.includes('insufficient_storage') || text.includes('no space left')) return 'no_space'
   if (
     text.includes('install_failed') ||

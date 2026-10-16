@@ -7,7 +7,15 @@ const out = (text) => process.stdout.write(text + '\n')
 if (args[0] === 'version') {
   out('Android Debug Bridge version 1.0.41\nVersion 35.0.2-fake')
 } else if (args[0] === 'connect') {
-  if (mode === 'refused') out(`failed to connect to '${args[1]}': Connection refused`)
+  const fs = require('fs')
+  let calls = 0
+  if (process.env.FAKE_ADB_STATE) {
+    try { calls = Number(fs.readFileSync(process.env.FAKE_ADB_STATE, 'utf8')) } catch {}
+    fs.writeFileSync(process.env.FAKE_ADB_STATE, String(calls + 1))
+  }
+  if (mode === 'authfail') out(`failed to authenticate to ${args[1]}`)
+  else if (mode === 'authfail-once' && calls === 0) out(`failed to authenticate to ${args[1]}`)
+  else if (mode === 'refused') out(`failed to connect to '${args[1]}': Connection refused`)
   else if (mode === 'winrefused') out(`cannot connect to ${args[1]}: No connection could be made because the target machine actively refused it. (10061)`)
   else out(`connected to ${args[1]}`)
 } else if (args[0] === 'devices') {

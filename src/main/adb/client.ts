@@ -39,8 +39,22 @@ export class AdbClient {
     this.sleep = options.sleep ?? realSleep
   }
 
-  private run(args: readonly string[], timeoutMs = 15_000): Promise<CommandResult> {
-    return runCommand(this.binary, [...this.baseArgs, ...args], { timeoutMs }, this.log)
+  private run(args: readonly string[], timeoutMs = 15_000, sink: LogSink | undefined = this.log): Promise<CommandResult> {
+    return runCommand(this.binary, [...this.baseArgs, ...args], { timeoutMs }, sink)
+  }
+
+  /**
+   * `adb connect` exits with code 0 even when it fails, so the activity log would show a
+   * failure as "ok". This marks such lines as failed, using the text adb printed.
+   */
+  private readonly connectSink: LogSink = (entry) => {
+    const parsed = parseConnectOutput(entry.stdout, entry.stderr)
+    if (entry.ok && !parsed.connected) {
+      const category = classifyAdbFailure(parsed.text)
+      this.log?.({ ...entry, ok: false, category: category === 'other' ? 'unreachable' : category })
+    } else {
+      this.log?.(entry)
+    }
   }
 
   /** Connects to a TV and, if the TV accepts us, reads its details. */
@@ -48,13 +62,22 @@ export class AdbClient {
     const serial = formatHostPort(target)
 
     // The first adb call also starts adb's background server, which can take a few seconds.
-    const connectResult = await this.run(['connect', serial], 30_000)
-    if (!connectResult.ok) {
-      return fail(connectResult.category ?? 'other', connectResult.stderr || connectResult.stdout)
-    }
-    const connected = parseConnectOutput(connectResult.stdout, connectResult.stderr)
-    if (!connected.connected) {
+    // A TV that has never seen this computer answers "failed to authenticate" and shows an
+    // "Allow" prompt, so we keep trying for a while to give the user time to tap it.
+    const deadline = Date.now() + this.authWaitMs
+    for (;;) {
+      const connectResult = await this.run(['connect', serial], 30_000, this.connectSink)
+      if (!connectResult.ok) {
+        return fail(connectResult.category ?? 'other', connectResult.stderr || connectResult.stdout)
+      }
+      const connected = parseConnectOutput(connectResult.stdout, connectResult.stderr)
+      if (connected.connected) break
+
       const category = classifyAdbFailure(connected.text)
+      if (category === 'unauthorized' && Date.now() < deadline) {
+        await this.sleep(this.authPollMs)
+        continue
+      }
       return fail(category === 'other' ? 'unreachable' : category, connected.text)
     }
 

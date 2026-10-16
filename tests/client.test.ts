@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { AdbClient } from '../src/main/adb/client'
 
@@ -55,6 +57,57 @@ describe('AdbClient.connect', () => {
       expect(outcome.category).toBe('unauthorized')
       expect(outcome.fix).toContain('Allow')
     }
+  })
+
+  it('says "not allowed yet" (not "unreachable") when the TV never accepts the prompt', async () => {
+    process.env['FAKE_ADB_MODE'] = 'authfail'
+    const c = new AdbClient({
+      binary: process.execPath,
+      baseArgs: [fakeAdb],
+      authWaitMs: 300,
+      authPollMs: 10,
+      sleep: () => Promise.resolve()
+    })
+    const outcome = await c.connect(target)
+    expect(outcome.ok).toBe(false)
+    if (!outcome.ok) {
+      expect(outcome.category).toBe('unauthorized')
+      expect(outcome.fix).toContain('Allow')
+    }
+  })
+
+  it('keeps trying and succeeds once the user taps Allow on the TV', async () => {
+    const state = join(mkdtempSync(join(tmpdir(), 'couchkit-fake-')), 'calls')
+    process.env['FAKE_ADB_MODE'] = 'authfail-once'
+    process.env['FAKE_ADB_STATE'] = state
+    try {
+      const c = new AdbClient({
+        binary: process.execPath,
+        baseArgs: [fakeAdb],
+        authWaitMs: 20_000,
+        authPollMs: 10,
+        sleep: () => Promise.resolve()
+      })
+      const outcome = await c.connect(target)
+      expect(outcome.ok).toBe(true)
+      expect(Number(readFileSync(state, 'utf8'))).toBe(2)
+    } finally {
+      delete process.env['FAKE_ADB_STATE']
+    }
+  })
+
+  it('marks a failed connect as failed in the activity log, even though adb exits 0', async () => {
+    process.env['FAKE_ADB_MODE'] = 'refused'
+    const entries: Array<{ ok: boolean; category?: string }> = []
+    const c = new AdbClient({
+      binary: process.execPath,
+      baseArgs: [fakeAdb],
+      log: (e) => entries.push(e),
+      sleep: () => Promise.resolve()
+    })
+    await c.connect(target)
+    expect(entries[0]?.ok).toBe(false)
+    expect(entries[0]?.category).toBe('unreachable')
   })
 
   it('reports an offline device', async () => {
