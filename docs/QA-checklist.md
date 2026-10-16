@@ -140,4 +140,7 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 108. Restart page: "Restart" asks Yes/No, then the TV restarts, the status bar says "Not connected", and you can reconnect from Connect once the TV is back (about a minute).
 109. "Restart into recovery" and "Restart into bootloader" show a warning first. Only try recovery if you are ready to use the TV remote in its menu (choose the option that reboots normally to leave it). Many TVs do not support bootloader mode; skip it unless you know why you need it.
 110. App ideas page: seven apps, each with "Open project page", which opens the project's own web page in your browser. Nothing is installed by Couchkit.
+111. Restart page: "Restart into recovery" and "Restart into bootloader" now take three steps: press the button, read the warning and tick "I understand, and I have the TV remote in my hand" (Continue stays greyed until you tick), then a "Last check" with "Yes, restart into ..." or "No, go back". Cancel or No returns to the start without touching the TV.
+112. Tune-ups > Speed: "Freeze cached apps" (TV default / On / Off). Restart the TV after changing. It may change nothing on your TV; that is expected.
+113. Cleanup > "Optimise apps": asks Yes/No, then shows "Working…" with minutes so far. You can switch to other pages and come back. When finished it says "Apps were optimised." This can take 5-30+ minutes; keep the TV on. "Put apps back" returns the apps to the TV's own settings.
 

@@ -534,6 +534,25 @@ export class AdbClient {
     return actionFail(result.category ?? 'other', 'The TV did not restart.', 'Try again, or use the TV\'s own menu or power button.', text)
   }
 
+  /**
+   * Recompiles installed apps so they start faster ("speed-profile"). Can take many minutes.
+   * `reset` puts the apps back to the way the TV had them.
+   */
+  async optimiseApps(serial: string, reset: boolean): Promise<ActionResult> {
+    const command = reset ? 'cmd package compile --reset -a' : 'cmd package compile -m speed-profile -a'
+    const result = await this.shell(serial, [command], 40 * 60_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (result.ok && !/exception|error:|denied|unknown option/i.test(text)) {
+      return { ok: true, detail: reset ? 'Apps were put back to the TV\'s own settings.' : 'Apps were optimised.' }
+    }
+    return actionFail(
+      result.category ?? 'other',
+      reset ? 'The TV did not reset the app optimisation.' : 'The TV did not finish optimising the apps.',
+      result.category === 'timeout' ? 'It took too long. The TV may still be working; wait a few minutes and check it is not slow.' : 'Some TVs do not allow this from a computer.',
+      text.slice(-1500)
+    )
+  }
+
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {
     const serial = formatHostPort(target)
     const [props, size] = await Promise.all([

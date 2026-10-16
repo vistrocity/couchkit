@@ -104,6 +104,22 @@ export const TWEAKS: readonly Tweak[] = [
     }
   },
   {
+    id: 'freezer',
+    group: 'Speed',
+    title: 'Freeze cached apps',
+    help: 'Lets Android 11 and newer pause apps you are not using, which can free memory on TVs with little RAM. It needs support from the TV\'s system, so on many TVs it changes nothing. Restart the TV afterwards for it to take effect. "TV default" removes the setting.',
+    reads: { mode: 'settings get global cached_apps_freezer' },
+    choices: [
+      { id: 'default', label: 'TV default', commands: ['settings delete global cached_apps_freezer'] },
+      { id: 'on', label: 'On', commands: ['settings put global cached_apps_freezer enabled'] },
+      { id: 'off', label: 'Off', commands: ['settings put global cached_apps_freezer disabled'] }
+    ],
+    detect: (v) => {
+      const m = (v['mode'] ?? 'null').trim()
+      return m === 'enabled' ? 'on' : m === 'disabled' ? 'off' : m === 'null' || m === '' || m === 'device_default' ? 'default' : null
+    }
+  },
+  {
     id: 'font',
     group: 'Display',
     title: 'Text size',

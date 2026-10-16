@@ -82,3 +82,33 @@ describe('app ideas', () => {
     expect(findIdea(1)).toBeUndefined()
   })
 })
+
+import { findChoice, findTweak, parseTweakReads } from '../src/shared/tweaks'
+
+describe('freeze cached apps tweak', () => {
+  it('detects and applies each choice', async () => {
+    const t = findTweak('freezer')!
+    expect(t.group).toBe('Speed')
+    const detect = (v: string): string | null => parseTweakReads(`@@freezer.mode\n${v}\n@@density\n`).tweaks.find((x) => x.id === 'freezer')!.choice
+    expect(detect('enabled')).toBe('on')
+    expect(detect('disabled')).toBe('off')
+    expect(detect('null')).toBe('default')
+    expect(detect('device_default')).toBe('default')
+    expect(detect('weird')).toBeNull()
+    const { client } = setup()
+    process.env['FAKE_ADB_SETTINGS'] = join(mkdtempSync(join(tmpdir(), 'ck-fz-')), 's.json')
+    expect((await client.runSettingsCommands(serial, findChoice(t, 'on')!.commands)).ok).toBe(true)
+    expect((await client.runSettingsCommands(serial, findChoice(t, 'default')!.commands)).ok).toBe(true)
+  })
+})
+
+describe('optimise apps', () => {
+  it('runs the compile and the reset commands', async () => {
+    const { client, log } = setup()
+    expect((await client.optimiseApps(serial, false)).ok).toBe(true)
+    expect((await client.optimiseApps(serial, true)).ok).toBe(true)
+    const text = readFileSync(log, 'utf8')
+    expect(text).toContain('cmd package compile -m speed-profile -a')
+    expect(text).toContain('cmd package compile --reset -a')
+  })
+})

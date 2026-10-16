@@ -44,6 +44,9 @@ const OPTIONS: readonly Option[] = [
 
 export function Restart({ connected, onGoToConnect, onRestarted }: Props): JSX.Element {
   const [confirm, setConfirm] = useState<RestartMode | null>(null)
+  /** Recovery and bootloader need two steps: read and tick, then a last check. */
+  const [step, setStep] = useState<1 | 2>(1)
+  const [understood, setUnderstood] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string; fix: string } | null>(null)
 
@@ -66,6 +69,8 @@ export function Restart({ connected, onGoToConnect, onRestarted }: Props): JSX.E
     const r = await window.couchkit.restartTv(mode)
     setBusy(false)
     setConfirm(null)
+    setStep(1)
+    setUnderstood(false)
     if (r.ok) {
       setMessage({ ok: true, text: 'The TV is restarting. Couchkit has disconnected; reconnect from the Connect page when the TV is back.', fix: '' })
       onRestarted()
@@ -97,21 +102,75 @@ export function Restart({ connected, onGoToConnect, onRestarted }: Props): JSX.E
             </p>
             <p className="muted">{o.help}</p>
             {confirm === o.mode ? (
-              <>
-                <p className={o.mode === 'system' ? '' : 'warn'}>{o.warning}</p>
-                <div className="row">
-                  <span>Are you sure?</span>
-                  <button type="button" className={o.mode === 'system' ? 'primary' : 'danger'} disabled={busy} onClick={() => void run(o.mode)}>
-                    Yes
-                  </button>
-                  <button type="button" disabled={busy} onClick={() => setConfirm(null)}>
-                    No
-                  </button>
-                </div>
-              </>
+              o.mode === 'system' ? (
+                <>
+                  <p>{o.warning}</p>
+                  <div className="row">
+                    <span>Are you sure?</span>
+                    <button type="button" className="primary" disabled={busy} onClick={() => void run(o.mode)}>
+                      Yes
+                    </button>
+                    <button type="button" disabled={busy} onClick={() => setConfirm(null)}>
+                      No
+                    </button>
+                  </div>
+                </>
+              ) : step === 1 ? (
+                <>
+                  <p className="warn">
+                    <strong>Warning.</strong> {o.warning}
+                  </p>
+                  <p className="warn">Couchkit loses its connection to the TV, and you will need the TV remote (or the TV's buttons) to get back to normal. If anything goes wrong, unplugging the TV for a minute restarts it.</p>
+                  <label className="row">
+                    <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
+                    <span>I understand, and I have the TV remote in my hand.</span>
+                  </label>
+                  <div className="row">
+                    <button type="button" className="danger" disabled={!understood} onClick={() => setStep(2)}>
+                      Continue
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirm(null)
+                        setStep(1)
+                        setUnderstood(false)
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="warn">
+                    <strong>Last check.</strong> The TV will go offline right now and {o.mode === 'recovery' ? 'open its recovery menu' : 'enter bootloader mode'}. Restart into {o.mode}?
+                  </p>
+                  <div className="row">
+                    <button type="button" className="danger" disabled={busy} onClick={() => void run(o.mode)}>
+                      Yes, restart into {o.mode}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setConfirm(null)
+                        setStep(1)
+                        setUnderstood(false)
+                      }}
+                    >
+                      No, go back
+                    </button>
+                  </div>
+                </>
+              )
             ) : (
               <div className="row">
-                <button type="button" disabled={busy} onClick={() => setConfirm(o.mode)}>
+                <button type="button" disabled={busy} onClick={() => {
+                    setStep(1)
+                    setUnderstood(false)
+                    setConfirm(o.mode)
+                  }}>
                   {o.button}
                 </button>
               </div>

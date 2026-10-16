@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { formatKb } from '@shared/cleanup'
-import type { ActionResult, DeviceInfo } from '@shared/types'
+import type { ActionResult, DeviceInfo, OptimiseState } from '@shared/types'
 
 interface Props {
   connected: DeviceInfo | null
@@ -36,6 +36,9 @@ export function Cleanup({ connected, onGoToConnect }: Props): JSX.Element {
   const [busy, setBusy] = useState<'caches' | 'background' | null>(null)
   const [cacheOutcome, setCacheOutcome] = useState<Outcome | null>(null)
   const [bgOutcome, setBgOutcome] = useState<Outcome | null>(null)
+  const [opt, setOpt] = useState<OptimiseState | null>(null)
+  const [optConfirm, setOptConfirm] = useState(false)
+  const [now, setNow] = useState(Date.now())
 
   const refreshStorage = useCallback(async (): Promise<void> => {
     const r = await window.couchkit.readStorage()
@@ -51,6 +54,22 @@ export function Cleanup({ connected, onGoToConnect }: Props): JSX.Element {
   useEffect(() => {
     if (connected !== null) void refreshStorage()
   }, [connected, refreshStorage])
+
+  // The optimise job runs in the background of the app; check on it while this page is open.
+  useEffect(() => {
+    if (connected === null) return
+    void window.couchkit.optimiseStatus().then(setOpt)
+  }, [connected])
+
+  const optRunning = opt?.running === true
+  useEffect(() => {
+    if (!optRunning) return
+    const id = setInterval(() => {
+      setNow(Date.now())
+      void window.couchkit.optimiseStatus().then(setOpt)
+    }, 2000)
+    return () => clearInterval(id)
+  }, [optRunning])
 
   if (connected === null) {
     return (
@@ -92,6 +111,13 @@ export function Cleanup({ connected, onGoToConnect }: Props): JSX.Element {
     setBgOutcome(fromAction(await window.couchkit.closeBackgroundApps(), 'Done. Apps that were running in the background were closed.'))
     setBusy(null)
   }
+
+  const startOptimise = async (reset: boolean): Promise<void> => {
+    setOptConfirm(false)
+    setOpt(await window.couchkit.optimiseApps(reset))
+  }
+
+  const minutes = opt !== null && opt.running ? Math.max(0, Math.floor((now - opt.startedAt) / 60000)) : 0
 
   const usedPct = storage === null ? 0 : Math.round(((storage.totalKb - storage.freeKb) / storage.totalKb) * 100)
 
@@ -147,6 +173,40 @@ export function Cleanup({ connected, onGoToConnect }: Props): JSX.Element {
           </button>
         </div>
         {bgOutcome !== null && <OutcomeCard outcome={bgOutcome} />}
+      </div>
+
+      <div className="card tweak">
+        <p>
+          <strong>Optimise apps</strong>
+        </p>
+        <p className="muted">
+          Prepares your apps so they can start a little faster. The gain is usually modest. It can take 5 to 30 minutes or more, and the TV may feel slow meanwhile. Keep the TV on and connected until it says it is done. "Put apps back" returns them to the TV's own settings.
+        </p>
+        {optRunning ? (
+          <p>
+            <strong>Working…</strong> {minutes < 1 ? 'less than a minute so far.' : `${minutes} minute${minutes === 1 ? '' : 's'} so far.`} You can look at other pages meanwhile.
+          </p>
+        ) : optConfirm ? (
+          <div className="row">
+            <span className="warn">Start now? Keep the TV on until it finishes.</span>
+            <button type="button" className="primary" onClick={() => void startOptimise(false)}>
+              Yes, start
+            </button>
+            <button type="button" onClick={() => setOptConfirm(false)}>
+              No
+            </button>
+          </div>
+        ) : (
+          <div className="row">
+            <button type="button" className="primary" onClick={() => setOptConfirm(true)}>
+              Optimise apps
+            </button>
+            <button type="button" onClick={() => void startOptimise(true)}>
+              Put apps back
+            </button>
+          </div>
+        )}
+        {opt !== null && !opt.running && opt.last !== null && <OutcomeCard outcome={fromAction(opt.last, opt.last.ok ? opt.last.detail : '')} />}
       </div>
 
       <div className="card tweak">

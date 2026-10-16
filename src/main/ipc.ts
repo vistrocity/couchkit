@@ -28,6 +28,7 @@ import type {
   FindTvsResult,
   ApplyTweakResult,
   AppSettings,
+  OptimiseState,
   HardwareResult,
   RestartMode,
   ListScreensaversResult,
@@ -569,6 +570,25 @@ export function registerIpc(): void {
     if (!('client' in s)) return s
     return s.client.clearAppData(s.serial, typeof packageName === 'string' ? packageName : '')
   })
+
+  /** The long "optimise apps" job lives here, so it carries on if the person changes page. */
+  let optimise: OptimiseState = { running: false, reset: false, startedAt: 0, last: null }
+
+  ipcMain.handle('cleanup:optimise', async (_event, reset: unknown): Promise<OptimiseState> => {
+    const s = session()
+    if (!('client' in s)) return { ...optimise, last: s }
+    if (optimise.running) return optimise
+    const isReset = reset === true
+    optimise = { running: true, reset: isReset, startedAt: Date.now(), last: null }
+    const client = s.client
+    const serial = s.serial
+    void client.optimiseApps(serial, isReset).then((result) => {
+      optimise = { running: false, reset: isReset, startedAt: optimise.startedAt, last: result }
+    })
+    return optimise
+  })
+
+  ipcMain.handle('cleanup:optimise-status', (): OptimiseState => optimise)
 
   ipcMain.handle('cleanup:app-cache', async (_event, packageName: unknown): Promise<ActionResult> => {
     const s = session()

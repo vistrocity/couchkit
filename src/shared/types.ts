@@ -232,6 +232,14 @@ export interface AppSettings {
   activityLog: boolean
 }
 
+/** The state of the long "optimise apps" job. */
+export interface OptimiseState {
+  running: boolean
+  reset: boolean
+  startedAt: number
+  last: ActionResult | null
+}
+
 export type RestartMode = 'system' | 'recovery' | 'bootloader'
 
 export type ListScreensaversResult = { ok: true; options: import('./tweaks').ScreensaverOption[] } | Failed
@@ -319,6 +327,9 @@ export interface CouchkitApi {
   listScreensavers(): Promise<ListScreensaversResult>
   setScreensaver(component: string): Promise<ActionResult>
 
+  /** Starts (or reports) the long optimise job; reset=true undoes it. */
+  optimiseApps(reset: boolean): Promise<OptimiseState>
+  optimiseStatus(): Promise<OptimiseState>
   readHardware(): Promise<HardwareResult>
   getSettings(): Promise<AppSettings>
   setActivityLog(enabled: boolean): Promise<AppSettings>
