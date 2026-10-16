@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type JSX } from 'react'
+import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import type { AdbStatus, AppInfo, DeviceInfo, HistoryEntry } from '@shared/types'
 import { Activity } from './screens/Activity'
 import { Capture } from './screens/Capture'
@@ -14,6 +14,8 @@ import { Backup } from './screens/Backup'
 import { Restart } from './screens/Restart'
 import { Launcher } from './screens/Launcher'
 import { Ideas } from './screens/Ideas'
+import type { HardwareInfo } from '@shared/hardware'
+import { formatKb } from '@shared/cleanup'
 import { Icon } from './components/Icon'
 import { Appearance } from './screens/Appearance'
 import { DEFAULT_ACCENT, DEFAULT_THEME, type ThemeId } from '@shared/appearance'
@@ -54,6 +56,8 @@ export function App(): JSX.Element {
   const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME)
   const [accent, setAccent] = useState<string>(DEFAULT_ACCENT)
   const connectedSerial = connected?.serial ?? null
+  const [hardware, setHardware] = useState<HardwareInfo | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
 
   useEffect(() => {
     void window.couchkit.getSettings().then((s) => {
@@ -86,6 +90,37 @@ export function App(): JSX.Element {
   useEffect(() => {
     void window.couchkit.listHistory().then(setHistory)
   }, [connectedSerial])
+  // Storage and memory for the strip at the top, read each time a TV connects.
+  useEffect(() => {
+    setHardware(null)
+    if (connectedSerial === null) return
+    let cancelled = false
+    void window.couchkit.readHardware().then((r) => {
+      if (!cancelled && r.ok) setHardware(r.hardware)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [connectedSerial])
+
+  // A short pop-up in the lower right when a TV connects or disconnects.
+  const lastName = useRef('')
+  const wasConnected = useRef(false)
+  useEffect(() => {
+    if (connectedSerial !== null) {
+      lastName.current = tvName
+      if (!wasConnected.current) setToast(`Connected to ${tvName}`)
+    } else if (wasConnected.current) {
+      setToast(`Disconnected from ${lastName.current}`)
+    }
+    wasConnected.current = connectedSerial !== null
+  }, [connectedSerial, tvName])
+  useEffect(() => {
+    if (toast === null) return
+    const t = window.setTimeout(() => setToast(null), 4000)
+    return () => window.clearTimeout(t)
+  }, [toast])
+
   useEffect(() => {
     setConsoleRuns([])
   }, [connectedSerial])
@@ -145,9 +180,19 @@ export function App(): JSX.Element {
       <div className="main">
         <header className="statusbar" aria-live="polite">
           {connected !== null ? (
-            <span className="ok">
-              ● Connected to {tvName} ({connected.host})
-            </span>
+            <div className="tv-strip">
+              <span className="tv-dot" aria-hidden="true" />
+              <strong>{tvName}</strong>
+              <span className="muted">
+                {[connected.manufacturer, connected.model].filter(Boolean).join(' ')} · {connected.host}
+              </span>
+              <span className="chips">
+                {connected.androidVersion !== undefined && <span className="chip">Android {connected.androidVersion}</span>}
+                {connected.resolution !== undefined && <span className="chip">{connected.resolution}</span>}
+                {hardware?.ramKb != null && <span className="chip">RAM {formatKb(hardware.ramKb)}</span>}
+                {hardware?.storage != null && <span className="chip">{formatKb(hardware.storage.freeKb)} free</span>}
+              </span>
+            </div>
           ) : (
             <span className="muted">○ Not connected</span>
           )}
@@ -155,7 +200,7 @@ export function App(): JSX.Element {
 
         <main className="content">
           {section === 'home' && (
-            <Home info={info} adb={adb} onAdbChanged={refreshAdb} onGoToConnect={() => setSection('connect')} onGo={(id) => setSection(id as SectionId)} connected={connected} tvName={tvName} />
+            <Home info={info} adb={adb} onAdbChanged={refreshAdb} onGoToConnect={() => setSection('connect')} onGo={(id) => setSection(id as SectionId)} connected={connected} />
           )}
           {section === 'connect' && (
             <Connect
@@ -191,6 +236,12 @@ export function App(): JSX.Element {
           {section === 'log' && <Activity />}
         </main>
       </div>
+      {toast !== null && (
+        <div className="toast" role="status">
+          <span>{toast}</span>
+          <button type="button" aria-label="Dismiss" onClick={() => setToast(null)}>×</button>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,7 +1,5 @@
-import { useEffect, useState, type JSX } from 'react'
+import type { JSX } from 'react'
 import type { AdbStatus, AppInfo, DeviceInfo } from '@shared/types'
-import type { HardwareInfo } from '@shared/hardware'
-import { formatKb } from '@shared/cleanup'
 import { ABOUT, ABOUT_LINKS } from '@shared/about'
 import { AdbCard } from '../components/AdbCard'
 
@@ -12,7 +10,6 @@ interface Props {
   onGoToConnect: () => void
   onGo: (section: string) => void
   connected: DeviceInfo | null
-  tvName: string
 }
 
 const TILES = [
@@ -26,48 +23,9 @@ const TILES = [
   { id: 'launcher', name: 'Launcher', what: 'Keep your favourite home screen in charge.' }
 ] as const
 
-export function Home({ info, adb, onAdbChanged, onGoToConnect, onGo, connected, tvName }: Props): JSX.Element {
-  const [hardware, setHardware] = useState<HardwareInfo | null>(null)
-  const serial = connected?.serial ?? null
-  useEffect(() => {
-    setHardware(null)
-    if (serial === null) return
-    let cancelled = false
-    void window.couchkit.readHardware().then((r) => {
-      if (!cancelled && r.ok) setHardware(r.hardware)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [serial])
-
+export function Home({ info, adb, onAdbChanged, onGoToConnect, onGo, connected }: Props): JSX.Element {
   return (
     <>
-      {connected !== null && (
-        <div className="tv-banner">
-          <div className="tv-banner-main">
-            <span className="tv-dot" aria-hidden="true" />
-            <div>
-              <strong>{tvName}</strong>
-              <div className="muted small">
-                {[connected.manufacturer, connected.model].filter(Boolean).join(' ')} · {connected.host}
-              </div>
-            </div>
-          </div>
-          <dl className="tv-facts">
-            <div><dt>Android</dt><dd>{connected.androidVersion ?? '—'}</dd></div>
-            <div><dt>Screen</dt><dd>{connected.resolution ?? '—'}</dd></div>
-            <div><dt>Memory</dt><dd>{hardware?.ramKb != null ? formatKb(hardware.ramKb) : '…'}</dd></div>
-            <div><dt>Storage free</dt><dd>{hardware?.storage != null ? `${formatKb(hardware.storage.freeKb)} of ${formatKb(hardware.storage.totalKb)}` : '…'}</dd></div>
-          </dl>
-          <div className="row" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" onClick={() => onGo('remote')}>Remote</button>
-            <button type="button" onClick={() => onGo('apps')}>Apps</button>
-            <button type="button" onClick={() => onGo('cleanup')}>Free up space</button>
-          </div>
-        </div>
-      )}
-
       <div className="hero">
         <h2>Welcome to {ABOUT.name}</h2>
         <p>

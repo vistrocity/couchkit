@@ -161,6 +161,6 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 126. Close and reopen the app: your theme and accent are remembered.
 127. Home page: tiles jump to their pages; the links open the right web pages; the Help menu has two links; in the installed app the View menu has no Reload or Developer Tools.
 128. Window and taskbar show the Couchkit icon (blue-green screen with a C).
-129. When connected, Home shows a banner with the TV name, Android version, screen, memory and free storage.
+129. When connected, a slim strip on every page shows the TV name, model, address, Android version, screen, RAM and free storage. A "Connected to ..." pop-up appears bottom-right for 4 seconds.
 130. Problems (wrong IP, TV off) show the same orange card with "What to try" and a Copy details button.
 131. Light theme: every page is readable with every accent colour.
