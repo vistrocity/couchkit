@@ -10,22 +10,20 @@ interface Props {
   focusToken: number
   onAdbChanged: () => void
   onConnected: (device: DeviceInfo | null) => void
+  /** The list of TVs used before. Kept by the app so the status bar can show a TV's nickname too. */
+  history: HistoryEntry[]
+  onHistoryChange: (entries: HistoryEntry[]) => void
 }
 
 type Failure = Extract<ConnectOutcome, { ok: false }>
 
-export function Connect({ adb, connected, focusToken, onAdbChanged, onConnected }: Props): JSX.Element {
+export function Connect({ adb, connected, focusToken, onAdbChanged, onConnected, history, onHistoryChange: setHistory }: Props): JSX.Element {
   const [address, setAddress] = useState('')
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<Failure | null>(null)
-  const [history, setHistory] = useState<HistoryEntry[]>([])
   const [searching, setSearching] = useState(false)
   const [found, setFound] = useState<FindTvsResult | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    void window.couchkit.listHistory().then(setHistory)
-  }, [connected])
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -181,7 +179,7 @@ function DeviceCard({ device, onDisconnect }: { device: DeviceInfo; onDisconnect
           </div>
         ))}
       </dl>
-      <button type="button" onClick={onDisconnect}>
+      <button type="button" className="danger" onClick={onDisconnect}>
         Disconnect
       </button>
     </section>

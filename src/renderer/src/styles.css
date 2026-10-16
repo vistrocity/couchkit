@@ -9,6 +9,7 @@
   --accent: #2563eb;
   --ok: #15803d;
   --warn: #b45309;
+  --danger: #c62828;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -21,6 +22,7 @@
     --accent: #6ea0ff;
     --ok: #4ade80;
     --warn: #fbbf24;
+    --danger: #f87171;
   }
 }
 
@@ -286,3 +288,6 @@ input.mono { font-size: 13px; }
 .found-list { list-style: none; margin: 0; padding: 0; }
 .found-row { display: flex; gap: 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
 .found-row:last-child { border-bottom: 0; }
+
+button.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
+button.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 16%, transparent); border-color: var(--danger); }

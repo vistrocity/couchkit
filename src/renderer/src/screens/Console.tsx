@@ -11,6 +11,8 @@ export interface ConsoleRun {
 interface Props {
   connected: DeviceInfo | null
   onGoToConnect: () => void
+  /** The TV's display name (its nickname if you gave it one). */
+  tvName: string
   /** Kept by the app, not by this page, so they survive switching to another tab. */
   command: string
   onCommandChange: Dispatch<SetStateAction<string>>
@@ -20,7 +22,7 @@ interface Props {
 
 const GROUPS = ['Info', 'Network', 'Apps and screen', 'Power'] as const
 
-export function Console({ connected, onGoToConnect, command, onCommandChange: setCommand, runs, onRunsChange: setRuns }: Props): JSX.Element {
+export function Console({ connected, onGoToConnect, tvName, command, onCommandChange: setCommand, runs, onRunsChange: setRuns }: Props): JSX.Element {
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState<string | null>(null)
   const [saved, setSaved] = useState<SavedShortcut[]>([])
@@ -199,7 +201,7 @@ export function Console({ connected, onGoToConnect, command, onCommandChange: se
               <i /> <i /> <i />
             </span>
             <span className="term-title">
-              couchkit@{(connected.model ?? connected.host).replace(/\s+/g, '-')}: ~
+              couchkit@{(tvName || connected.host).replace(/\s+/g, '-')}: ~
             </span>
             <span className="term-actions">
               <button type="button" onClick={() => void copy(latest?.result.output ?? '')} disabled={latest === undefined || latest.result.output === ''}>

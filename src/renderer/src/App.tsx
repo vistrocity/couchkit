@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
-import type { AdbStatus, AppInfo, DeviceInfo } from '@shared/types'
+import type { AdbStatus, AppInfo, DeviceInfo, HistoryEntry } from '@shared/types'
 import { Activity } from './screens/Activity'
 import { Capture } from './screens/Capture'
 import { Connect } from './screens/Connect'
@@ -29,10 +29,17 @@ export function App(): JSX.Element {
   const [adb, setAdb] = useState<AdbStatus | null>(null)
   const [connected, setConnected] = useState<DeviceInfo | null>(null)
   const [focusToken, setFocusToken] = useState(0)
+  const [history, setHistory] = useState<HistoryEntry[]>([])
   // Console work is kept here so it survives switching tabs. It is cleared when the TV changes or disconnects.
   const [consoleCommand, setConsoleCommand] = useState('')
   const [consoleRuns, setConsoleRuns] = useState<ConsoleRun[]>([])
   const connectedSerial = connected?.serial ?? null
+  // The name shown for the TV: the nickname you gave it, else its model, else its address.
+  const nickname = connected !== null ? history.find((h) => h.id === connected.serial)?.nickname : undefined
+  const tvName = connected !== null ? (nickname ?? connected.model ?? connected.host) : ''
+  useEffect(() => {
+    void window.couchkit.listHistory().then(setHistory)
+  }, [connectedSerial])
   useEffect(() => {
     setConsoleRuns([])
   }, [connectedSerial])
@@ -84,7 +91,7 @@ export function App(): JSX.Element {
         <header className="statusbar" aria-live="polite">
           {connected !== null ? (
             <span className="ok">
-              ● Connected to {connected.model ?? connected.host} ({connected.host})
+              ● Connected to {tvName} ({connected.host})
             </span>
           ) : (
             <span className="muted">○ Not connected</span>
@@ -102,6 +109,8 @@ export function App(): JSX.Element {
               focusToken={focusToken}
               onAdbChanged={refreshAdb}
               onConnected={setConnected}
+              history={history}
+              onHistoryChange={setHistory}
             />
           )}
           {section === 'remote' && <Remote connected={connected} onGoToConnect={() => setSection('connect')} />}
@@ -110,6 +119,7 @@ export function App(): JSX.Element {
           {section === 'console' && <Console
               connected={connected}
               onGoToConnect={() => setSection('connect')}
+              tvName={tvName}
               command={consoleCommand}
               onCommandChange={setConsoleCommand}
               runs={consoleRuns}
