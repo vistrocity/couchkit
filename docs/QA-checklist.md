@@ -87,3 +87,17 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 61. Let a recording run past 3 minutes: the page says "Stopped by the TV after 3:00" and "Save recording" still saves it.
 62. If your TV does not allow recording, a plain message appears with technical details (send me the Activity log).
 63. On a Mac, repeat 54-61 (the folders are Pictures/Couchkit and Movies/Couchkit).
+
+## Slice 5 (console, and dark dropdowns) - test on a real TV
+
+64. In dark mode, every dropdown list (Apps filter, Capture quality) shows readable text on every row.
+65. Console page before connecting says "Connect to your TV first".
+66. Click "Android version", "Battery and power", "Free storage": each prints real information from your TV.
+67. "App on screen now" shows the app currently open on the TV (change app and run it again).
+68. Type `getprop ro.product.model` and press Enter: the model name appears. "Copy" copies the output.
+69. Type `rm -rf /sdcard/test` : it asks "Yes, run it / No" first. Press No: nothing runs.
+70. "Restart the TV" asks first; do NOT press Yes unless you want to restart.
+71. Type a command, click "Save as shortcut...", name it, and see it under "Yours". Restart Couchkit: it is still there. The x removes it.
+72. Run `logcat` (it never ends): it stops after 30 seconds with a clear message.
+73. "Open Settings" opens the Settings app on the TV.
+74. On a Mac, repeat 65-73.

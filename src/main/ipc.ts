@@ -8,6 +8,7 @@ import { installPlatformTools, platformToolsUrl } from './adb/install'
 import { runCommand, type LogSink } from './adb/runner'
 import { platform } from './platform'
 import { ActivityLog } from './store/activity-log'
+import { ShortcutStore, addShortcut, removeShortcut } from './store/shortcuts'
 import { HistoryStore, removeEntry, renameEntry, upsertConnection } from './store/history'
 import { explainFailure } from '@shared/explain'
 import { parseHostPort } from '@shared/network'
@@ -21,6 +22,7 @@ import type {
   RecordingStatus,
   SaveRecordingResult,
   ScreenshotResult,
+  ShellResult,
   TransferResult,
   ConnectOutcome,
   DeviceInfo,
@@ -37,6 +39,7 @@ import type {
 export function registerIpc(): void {
   const activityLog = new ActivityLog()
   const history = new HistoryStore(join(platform.dataDir(), 'history.json'))
+  const shortcuts = new ShortcutStore(join(platform.dataDir(), 'shortcuts.json'))
   let connected: DeviceInfo | null = null
   let installing = false
 
@@ -359,6 +362,34 @@ export function registerIpc(): void {
     if (typeof path !== 'string') return
     const allowed = [join(app.getPath('pictures'), 'Couchkit'), join(app.getPath('videos'), 'Couchkit')]
     if (allowed.some((dir) => path.startsWith(dir)) && existsSync(path)) platform.revealInFolder(path)
+  })
+
+  // ---- Console ----
+
+  ipcMain.handle('console:run', async (_event, command: unknown): Promise<ShellResult> => {
+    const s = session()
+    if (!('client' in s)) {
+      return { ok: false, output: '', truncated: false, exitCode: null, durationMs: 0, category: s.ok ? 'other' : s.category, message: s.ok ? '' : `${s.message} ${s.fix}` }
+    }
+    return s.client.runShell(s.serial, typeof command === 'string' ? command : '')
+  })
+
+  ipcMain.handle('console:shortcuts-list', () => shortcuts.load())
+
+  ipcMain.handle('console:shortcuts-save', async (_event, name: unknown, command: unknown) => {
+    const current = await shortcuts.load()
+    const updated = addShortcut(current, typeof name === 'string' ? name : '', typeof command === 'string' ? command : '')
+    if (updated === null) return current
+    await shortcuts.save(updated)
+    return updated
+  })
+
+  ipcMain.handle('console:shortcuts-remove', async (_event, id: unknown) => {
+    const current = await shortcuts.load()
+    if (typeof id !== 'string') return current
+    const updated = removeShortcut(current, id)
+    await shortcuts.save(updated)
+    return updated
   })
 
   ipcMain.handle(

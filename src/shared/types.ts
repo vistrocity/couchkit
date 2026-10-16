@@ -185,6 +185,19 @@ export interface RecordingStatus {
   startedAt?: number
 }
 
+export interface ShellResult {
+  ok: boolean
+  /** What the TV printed (normal output, then any error output). */
+  output: string
+  /** True if the output was cut because it was very long. */
+  truncated: boolean
+  exitCode: number | null
+  durationMs: number
+  category?: ErrorCategory
+  /** Plain-words explanation when the command could not be run at all (not when the TV itself reported an error). */
+  message?: string
+}
+
 /** What the UI is allowed to ask the main process to do. */
 export interface CouchkitApi {
   getAppInfo(): Promise<AppInfo>
@@ -237,6 +250,12 @@ export interface CouchkitApi {
   stopRecording(): Promise<SaveRecordingResult>
   /** Shows a saved screenshot or video in the system file manager. */
   revealCapture(path: string): Promise<void>
+
+  /** Runs one command on the TV's shell (like `adb shell`). Stops after 30 seconds. */
+  runShell(command: string): Promise<ShellResult>
+  listShortcuts(): Promise<import('./console').SavedShortcut[]>
+  saveShortcut(name: string, command: string): Promise<import('./console').SavedShortcut[]>
+  removeShortcut(id: string): Promise<import('./console').SavedShortcut[]>
 }
 
 declare global {

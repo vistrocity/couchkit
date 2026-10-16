@@ -61,7 +61,7 @@ if (args[0] === 'version') {
   if (flag === '-3') out('package:com.example.user')
   else if (flag === '-d') out('package:com.example.off')
   else out('package:com.example.user  installer=com.android.vending  versionCode:12\npackage:com.example.off  installer=null  versionCode:3\npackage:com.android.tv  installer=null  versionCode:30')
-} else if (args[0] === '-s' && args[2] === 'shell' && /dumpsys/.test(args[3] || '')) {
+} else if (args[0] === '-s' && args[2] === 'shell' && /dumpsys package packages/.test(args[3] || '')) {
   out('  Package [com.example.user] (a1):\n    versionName=1.2.3\n  Package [com.android.tv] (b2):\n    versionName=9')
 } else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'pm') {
   out(args[4] === 'disable-user' ? 'Package ' + args[7] + ' new state: disabled-user' : args[4] === 'enable' ? 'Package ' + args[5] + ' new state: enabled' : 'Success')
@@ -70,6 +70,13 @@ if (args[0] === 'version') {
   else out('Performing Streamed Install\nSuccess')
 } else if (args[0] === '-s' && args[2] === 'uninstall') {
   out('Success')
+} else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4) {
+  const cmd = args[3]
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + cmd + '\n')
+  if (/^hang/.test(cmd)) setInterval(() => {}, 1000)
+  else if (/^fail/.test(cmd)) { process.stderr.write('/system/bin/sh: fail: inaccessible or not found\n'); process.exit(127) }
+  else if (/^huge/.test(cmd)) out('x'.repeat(300000))
+  else out('ran: ' + cmd)
 } else if (args[0] === 'disconnect') {
   out(`disconnected ${args[1]}`)
 } else {

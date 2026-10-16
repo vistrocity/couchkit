@@ -56,7 +56,11 @@ const api: CouchkitApi = {
   startRecording: (preset) => ipcRenderer.invoke('capture:record-start', preset),
   recordingStatus: () => ipcRenderer.invoke('capture:record-status'),
   stopRecording: () => ipcRenderer.invoke('capture:record-stop'),
-  revealCapture: (path) => ipcRenderer.invoke('capture:reveal', path)
+  revealCapture: (path) => ipcRenderer.invoke('capture:reveal', path),
+  runShell: (command) => ipcRenderer.invoke('console:run', command),
+  listShortcuts: () => ipcRenderer.invoke('console:shortcuts-list'),
+  saveShortcut: (name, command) => ipcRenderer.invoke('console:shortcuts-save', name, command),
+  removeShortcut: (id) => ipcRenderer.invoke('console:shortcuts-remove', id)
 }
 
 contextBridge.exposeInMainWorld('couchkit', api)

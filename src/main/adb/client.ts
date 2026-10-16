@@ -9,6 +9,7 @@ import { runCommand, type LogSink } from './runner'
 import { explainFailure } from '@shared/explain'
 import { formatHostPort, type HostPort } from '@shared/network'
 import { isRemoteKey, isValidPackageName } from '@shared/remote'
+import { isValidCommand } from '@shared/console'
 import { isDeletablePath, isValidRemotePath, joinRemotePath, normalizeRemotePath } from '@shared/tvpath'
 import type {
   ActionResult,
@@ -19,6 +20,7 @@ import type {
   ErrorCategory,
   ListAppsResult,
   ListFilesResult,
+  ShellResult,
   TransferResult
 } from '@shared/types'
 
@@ -329,6 +331,31 @@ export class AdbClient {
       'Some TVs do not allow screen recording. Protected apps (such as streaming services) also block it.',
       recorderText !== '' ? recorderText : pullText
     )
+  }
+
+  /** Runs a command on the TV's shell and returns what it printed. Never runs anything on this computer. */
+  async runShell(serial: string, command: string): Promise<ShellResult> {
+    if (!isValidCommand(command)) {
+      return { ok: false, output: '', truncated: false, exitCode: null, durationMs: 0, category: 'other', message: 'Type a single-line command.' }
+    }
+    const result = await this.shell(serial, [command.trim()], 30_000)
+    const combined = result.stdout + (result.stdout !== '' && !result.stdout.endsWith('\n') && result.stderr !== '' ? '\n' : '') + result.stderr
+    const limit = 200_000
+    const truncated = combined.length > limit
+    const category = result.category
+    return {
+      ok: result.ok,
+      output: truncated ? combined.slice(0, limit) : combined,
+      truncated,
+      exitCode: result.exitCode,
+      durationMs: result.durationMs,
+      ...(category !== undefined ? { category } : {}),
+      ...(category === 'timeout'
+        ? { message: 'The command did not finish within 30 seconds, so it was stopped.' }
+        : category === 'tool_missing' || category === 'unauthorized' || category === 'offline' || category === 'unreachable'
+          ? { message: explainFailure(category).message }
+          : {})
+    }
   }
 
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {
