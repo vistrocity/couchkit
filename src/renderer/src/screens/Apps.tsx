@@ -1,5 +1,6 @@
 import { ErrorCard } from '../components/ErrorCard'
 import { useCallback, useEffect, useMemo, useState, type DragEvent, type JSX } from 'react'
+import { RISK_CONSEQUENCES, RISK_VERBS, blockedReason, type RiskyAction } from '@shared/apprisk'
 import type { ActionResult, ApkInstallProgress, ApkInstallResult, AppPackage, DeviceInfo, ListAppsResult } from '@shared/types'
 
 interface Props {
@@ -24,6 +25,12 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
   const [notice, setNotice] = useState<ActionResult | null>(null)
   const [busyPackage, setBusyPackage] = useState<string | null>(null)
   const [elevated, setElevated] = useState(false)
+  // System apps: the person must accept a high-risk warning before they are listed.
+  const [systemAccepted, setSystemAccepted] = useState(false)
+  const [gate, setGate] = useState(false)
+  const [activeHome, setActiveHome] = useState<string | null>(null)
+  const [risk, setRisk] = useState<{ pkg: string; action: RiskyAction } | null>(null)
+  const [riskTick, setRiskTick] = useState(false)
 
   const refresh = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -46,6 +53,33 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
   useEffect(() => {
     void window.couchkit.isElevated().then(setElevated)
   }, [])
+
+  const askRisk = (pkg: string, action: RiskyAction): void => {
+    setConfirm(null)
+    setConfirmClear(null)
+    setRiskTick(false)
+    setRisk({ pkg, action })
+  }
+
+  const chooseFilter = (value: Filter): void => {
+    setRisk(null)
+    if (value === 'all' && !systemAccepted) {
+      setGate(true)
+      return
+    }
+    setGate(false)
+    setFilter(value)
+  }
+
+  const acceptSystem = (): void => {
+    setSystemAccepted(true)
+    setGate(false)
+    setFilter('all')
+    // Learn which app is the real home screen so it can be protected.
+    void window.couchkit.launcherStatus().then((r) => {
+      if (r.ok) setActiveHome(r.status.activeHomePackage)
+    })
+  }
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -187,7 +221,7 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
           Search apps
         </label>
         <input id="app-search" type="text" className="grow" placeholder="Search by app name…" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <select aria-label="Which apps to show" value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>
+        <select aria-label="Which apps to show" value={gate ? 'user' : filter} onChange={(e) => chooseFilter(e.target.value as Filter)}>
           <option value="user">Apps I installed</option>
           <option value="all">All apps (including system)</option>
         </select>
@@ -195,6 +229,32 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
           {loading ? 'Loading…' : 'Refresh'}
         </button>
       </div>
+
+      {gate && (
+        <div className="card risk-card" role="alertdialog" aria-labelledby="risk-title">
+          <p id="risk-title" className="risk-title">
+            <span className="risk-badge">HIGH RISK</span> System apps run your TV
+          </p>
+          <p>
+            System apps came with the TV and keep it working: the home screen, settings, remote, Wi-Fi, updates and more. Turning one off (freezing), removing it or erasing its data can leave the TV showing a black screen, ignoring the remote, or needing a <strong>factory reset</strong> to recover.
+          </p>
+          <p>Only change a system app if you know exactly what it does and can recover the TV. If you are not sure, leave it alone.</p>
+          <div className="row">
+            <button type="button" className="danger" onClick={acceptSystem}>
+              I understand the risk, show system apps
+            </button>
+            <button type="button" className="primary" onClick={() => setGate(false)}>
+              Go back
+            </button>
+          </div>
+        </div>
+      )}
+
+      {filter === 'all' && systemAccepted && (
+        <p className="risk-banner" role="note">
+          <span className="risk-badge">HIGH RISK</span> System apps are shown. Disabling, removing or clearing them can break your TV.
+        </p>
+      )}
 
       {listFailure !== null && (
         <ErrorCard message={listFailure.message} fix={listFailure.fix} />
@@ -211,14 +271,57 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
           <li key={a.packageName} className="card app">
             <div className="grow">
               <div>
-                <strong>{a.packageName}</strong> {!a.enabled && <span className="warn">(disabled)</span>}
+                <strong>{a.packageName}</strong> {a.system && <span className="risk-badge">SYSTEM · HIGH RISK</span>}{' '}
+                {!a.enabled && <span className="warn">(disabled)</span>}
               </div>
               <div className="muted small">
                 {a.versionName !== undefined ? `Version ${a.versionName}` : 'Version unknown'} · {a.installedFrom}
                 {a.system ? ' · System app' : ''}
+                {a.packageName === activeHome ? ' · Your current home screen' : ''}
               </div>
             </div>
-            {confirmClear === a.packageName ? (
+            {risk !== null && risk.pkg === a.packageName ? (
+              <div className="risk-confirm">
+                <p>
+                  <span className="risk-badge">HIGH RISK</span> <strong>You are about to {RISK_VERBS[risk.action]} the system app {a.packageName}.</strong>
+                </p>
+                <p>{RISK_CONSEQUENCES[risk.action]}</p>
+                <label>
+                  <input type="checkbox" checked={riskTick} onChange={(e) => setRiskTick(e.target.checked)} /> I understand this can break my TV and I can recover it if it does.
+                </label>
+                <div className="row">
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={!riskTick || busyPackage !== null}
+                    onClick={() => {
+                      const { action } = risk
+                      setRisk(null)
+                      setRiskTick(false)
+                      void act(a.packageName, () =>
+                        action === 'disable'
+                          ? window.couchkit.setAppEnabled(a.packageName, false)
+                          : action === 'uninstall'
+                            ? window.couchkit.uninstallApp(a.packageName)
+                            : window.couchkit.clearAppData(a.packageName)
+                      )
+                    }}
+                  >
+                    Yes, {risk.action === 'disable' ? 'turn it off' : risk.action === 'uninstall' ? 'remove it' : 'erase its data'}
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => {
+                      setRisk(null)
+                      setRiskTick(false)
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : confirmClear === a.packageName ? (
               <div className="row clear-confirm">
                 <span>
                   <strong>Delete all of this app's data?</strong> Logins, downloads and settings inside the app are erased and cannot be brought back.
@@ -256,16 +359,34 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
                 <button type="button" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.forceStopApp(a.packageName))}>
                   Force stop
                 </button>
-                <button type="button" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.setAppEnabled(a.packageName, !a.enabled))}>
+                <button
+                  type="button"
+                  title={a.enabled && a.system ? (blockedReason(a.packageName, activeHome) ?? undefined) : undefined}
+                  disabled={busyPackage !== null || (a.enabled && a.system && blockedReason(a.packageName, activeHome) !== null)}
+                  onClick={() => {
+                    if (a.enabled && a.system) return askRisk(a.packageName, 'disable')
+                    void act(a.packageName, () => window.couchkit.setAppEnabled(a.packageName, !a.enabled))
+                  }}
+                >
                   {a.enabled ? 'Disable' : 'Enable'}
                 </button>
                 <button type="button" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.clearAppCache(a.packageName))}>
                   Clear cache
                 </button>
-                <button type="button" disabled={busyPackage !== null} onClick={() => setConfirmClear(a.packageName)}>
+                <button
+                  type="button"
+                  title={a.system ? (blockedReason(a.packageName, activeHome) ?? undefined) : undefined}
+                  disabled={busyPackage !== null || (a.system && blockedReason(a.packageName, activeHome) !== null)}
+                  onClick={() => (a.system ? askRisk(a.packageName, 'clear') : setConfirmClear(a.packageName))}
+                >
                   Clear data
                 </button>
-                <button type="button" disabled={busyPackage !== null} onClick={() => setConfirm(a.packageName)}>
+                <button
+                  type="button"
+                  title={a.system ? (blockedReason(a.packageName, activeHome) ?? undefined) : undefined}
+                  disabled={busyPackage !== null || (a.system && blockedReason(a.packageName, activeHome) !== null)}
+                  onClick={() => (a.system ? askRisk(a.packageName, 'uninstall') : setConfirm(a.packageName))}
+                >
                   Uninstall
                 </button>
               </div>

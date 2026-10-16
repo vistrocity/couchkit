@@ -423,3 +423,14 @@ button { transition: border-color 0.12s, filter 0.12s; }
 .perm-row > div { flex: 1; min-width: 0; }
 .perm-row > span:not(.small) { min-width: 64px; font-weight: 600; }
 .linklike { border: 0; background: none; padding: 0; color: var(--accent); text-decoration: underline; cursor: pointer; }
+
+/* High-risk warnings for system apps */
+.risk-badge { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; color: #fff; background: var(--danger); vertical-align: 1px; }
+:root[data-theme='dark'] .risk-badge { color: #1a0a0a; }
+.risk-card, .risk-confirm { border-color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, var(--bg)); }
+.risk-card { border-left: 4px solid var(--danger); }
+.risk-title { font-size: 16px; font-weight: 700; margin: 0 0 8px; }
+.risk-confirm { flex: 1 0 100%; padding: 12px 14px; border: 1px solid var(--danger); border-radius: 10px; }
+.risk-confirm p { margin: 0 0 8px; }
+.risk-confirm label { display: block; margin: 8px 0; font-weight: 600; }
+.risk-banner { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border)); background: color-mix(in srgb, var(--danger) 8%, transparent); }

@@ -172,3 +172,6 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 137. Tune-ups > Private DNS: type your own DNS host name (for example dns.example.com) and press Use this DNS; the 15-second Keep/Undo banner appears. A number address such as 8.8.8.8 is refused with a clear message.
 138. Cleanup > "Clear one app's data" has a Go to Apps button.
 139. The window opens large (up to 1120 x 1160, never bigger than the screen) so Home needs little or no scrolling.
+140. Apps: choosing "All apps (including system)" first shows a red HIGH RISK warning; system apps appear only after "I understand the risk". Cancel/Go back keeps the list on your own apps.
+141. System apps carry a red SYSTEM / HIGH RISK badge. Disable, Uninstall and Clear data on them ask again, naming the app and the consequences, and the red button stays off until the box is ticked.
+142. Core system apps (Settings, System UI, Google services and a few more) and the TV's current home screen cannot be disabled, removed or wiped from here; the buttons are greyed out with a reason.

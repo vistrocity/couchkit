@@ -117,6 +117,8 @@ describe('AdbClient on the TV', () => {
   })
   it('rejects a hostile package name', async () => {
     expect((await client().uninstall(serial, 'com.x; reboot')).ok).toBe(false)
+    expect((await client().uninstall(serial, 'com.android.settings')).ok).toBe(false)
+    expect((await client().setEnabled(serial, 'com.android.systemui', false)).ok).toBe(false)
     expect((await client().setEnabled(serial, '--user', false)).ok).toBe(false)
   })
 })

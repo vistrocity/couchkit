@@ -232,6 +232,7 @@ export class AdbClient {
   /** Removes an app. Apps that came with the TV are only removed for the current user (reversible). */
   async uninstall(serial: string, packageName: string): Promise<ActionResult> {
     if (!isValidPackageName(packageName)) return actionFail('other', 'That is not a valid app name.', '', packageName)
+    if (isProtectedPackage(packageName)) return actionFail('other', 'Couchkit will not remove this core system app.', 'Removing it could stop the TV from working.', packageName)
     const user = await this.shell(serial, ['pm', 'list', 'packages', '-3'], 30_000)
     const isUserApp = packageNameSet(user.stdout).has(packageName)
     const result = isUserApp
@@ -250,6 +251,7 @@ export class AdbClient {
   /** Turns an app off or on without removing it. */
   async setEnabled(serial: string, packageName: string, enabled: boolean): Promise<ActionResult> {
     if (!isValidPackageName(packageName)) return actionFail('other', 'That is not a valid app name.', '', packageName)
+    if (!enabled && isProtectedPackage(packageName)) return actionFail('other', 'Couchkit will not turn off this core system app.', 'Turning it off could stop the TV from working.', packageName)
     const args = enabled
       ? ['pm', 'enable', packageName]
       : ['pm', 'disable-user', '--user', '0', packageName]
