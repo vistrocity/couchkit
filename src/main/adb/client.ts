@@ -18,6 +18,8 @@ import {
   keepAliveCommands,
   packageOf,
   parseComponents,
+  isNotALauncher,
+  parseActiveHome,
   parseDefaultLauncher,
   parsePackageNames,
   parsePids,
@@ -578,11 +580,14 @@ export class AdbClient {
       return { ok: false, message, fix, detail: (first.stderr || first.stdout).trim() }
     }
     const parts = splitMarked(first.stdout)
-    const components = parseComponents(parts.get('lh-list') ?? '').slice(0, MAX_LAUNCHERS)
+    const components = parseComponents(parts.get('lh-list') ?? '')
+      .filter((c) => !isNotALauncher(packageOf(c)))
+      .slice(0, MAX_LAUNCHERS)
     if (components.length === 0) {
       return { ok: false, message: 'The TV did not list any launchers.', fix: 'This TV may not support the launcher check.', detail: first.stdout.slice(0, 1500) }
     }
     const defaultComponent = parseDefaultLauncher(parts.get('lh-default') ?? '')
+    const activeHome = parseActiveHome(parts.get('lh-home') ?? '')
     const whitelist = parseWhitelist(parts.get('lh-idle') ?? '')
     const disabled = parsePackageNames(parts.get('lh-disabled') ?? '')
     const system = parsePackageNames(parts.get('lh-system') ?? '')
@@ -596,12 +601,13 @@ export class AdbClient {
         packageName: pkg,
         system: system.has(pkg),
         isDefault: component === defaultComponent,
+        isActive: activeHome !== null && activeHome === pkg,
         running: running.has(pkg),
         keepAlive: whitelist.has(pkg)
       }
     })
     const turnedOff = STOCK_LAUNCHER_PACKAGES.filter((p) => disabled.has(p))
-    return { ok: true, status: { launchers, defaultComponent, turnedOff } }
+    return { ok: true, status: { launchers, defaultComponent, activeHomePackage: launchers.some((l) => l.isActive) ? activeHome : null, turnedOff } }
   }
 
   /** Makes a launcher the one the Home button opens. Only launchers the TV lists are accepted. */
@@ -614,7 +620,7 @@ export class AdbClient {
     const result = await this.shell(serial, [setDefaultCommand(component)], 30_000)
     const text = `${result.stdout}\n${result.stderr}`.trim()
     const after = await this.launcherStatus(serial)
-    if (after.ok && after.status.defaultComponent === component) return { ok: true, detail: 'Done. Press Home on the TV remote to see it.' }
+    if (after.ok && (after.status.defaultComponent === component || after.status.activeHomePackage === packageOf(component))) return { ok: true, detail: 'Done. Press Home on the TV remote to see it.' }
     return actionFail(
       result.category ?? 'other',
       'The TV did not switch its home screen.',
@@ -644,8 +650,11 @@ export class AdbClient {
       const status = await this.launcherStatus(serial)
       if (!status.ok) return actionFail('other', status.message, status.fix, status.detail)
       const def = status.status.defaultComponent
+      const active = status.status.activeHomePackage
       const others = status.status.launchers.filter((l) => l.packageName !== packageName)
-      if (others.length === 0 || def === null || packageOf(def) === packageName) {
+      // Another launcher must already be in charge: either Android's default, or the one running the home screen.
+      const otherInCharge = (def !== null && packageOf(def) !== packageName) || (active !== null && active !== packageName)
+      if (others.length === 0 || !otherInCharge) {
         return actionFail(
           'other',
           'Choose your own launcher as the default first.',

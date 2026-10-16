@@ -149,4 +149,6 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 117. "Turn off the stock launcher" is greyed until your own launcher is the default. After Yes, press Home: your launcher opens. If anything is wrong, "Turn back on" (same page) restores it. Check the TV settings screen and input switching still work.
 118. Tune-ups > System > HDMI-CEC block: three On/Off switches (HDMI-CEC, turn TV on when a device starts, turn devices off with the TV). Try turning the TV on with a console, with the switch On and Off.
 119. Apps page: "Open" launches the app on the TV; "Force stop" stops it. Force stop on a core system app (for example com.android.systemui in the all-apps list) is refused.
+120. Launcher page: "com.android.tv.settings" and setup screens are no longer listed as launchers.
+121. If your TV shows one launcher when you press Home but Android's list names another default, a note says so. The card of the launcher actually in charge says "Home button shows this now". Check this matches what you see on the TV.
 

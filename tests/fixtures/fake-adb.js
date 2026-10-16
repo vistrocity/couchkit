@@ -102,12 +102,13 @@ if (args[0] === 'version') {
   const file = process.env.FAKE_ADB_LAUNCHER
   const st = file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { default: 'com.google.android.tvlauncher/.MainActivity', disabled: [], idle: [], stopped: [] }
   fs.appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + args[3] + '\n')
-  const all = ['com.google.android.tvlauncher/.MainActivity', 'com.spocky.projengmenu/.ui.home.MainActivity']
+  const all = ['com.google.android.tvlauncher/.MainActivity', 'com.spocky.projengmenu/.ui.home.MainActivity', 'com.android.tv.settings/.MainSettings']
   const lines = []
   for (const part of args[3].split('; ')) {
     let m
     if ((m = /^echo '(.*)'$/.exec(part))) lines.push(m[1])
     else if ((m = /^echo @@lh-pid (\S+) \$\(pidof \S+\)$/.exec(part))) lines.push('@@lh-pid ' + m[1] + ' ' + (st.disabled.includes(m[1]) || st.stopped.includes(m[1]) ? '' : '4321'))
+    else if (part === 'dumpsys activity activities | grep mHomeProcess') { const act = st.active || (st.default || '').split('/')[0]; if (act) lines.push('  mHomeProcess=ProcessRecord{1a2b3c 4321:' + act + '/u0a95}') }
     else if (/^cmd package query-activities/.test(part)) { for (const c of all) if (!st.disabled.includes(c.split('/')[0])) lines.push('priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false', c) }
     else if (/^cmd package resolve-activity/.test(part)) lines.push('priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true', st.default || 'android/com.android.internal.app.ResolverActivity')
     else if (part === 'dumpsys deviceidle whitelist') { lines.push('system-excidle,com.android.shell,2000'); for (const p of st.idle) lines.push('user,' + p + ',10123') }

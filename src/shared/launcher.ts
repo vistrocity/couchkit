@@ -21,19 +21,39 @@ export interface LauncherInfo {
   isDefault: boolean
   /** Has a running process right now. */
   running: boolean
+  /** Is the one in charge of the home screen right now. */
+  isActive: boolean
   /** Exempt from battery saving, so Android is less likely to close it. */
   keepAlive: boolean
 }
 
 export interface LauncherStatus {
   launchers: LauncherInfo[]
-  /** The launcher the Home button opens, or null when none is chosen (the TV may ask each time). */
+  /** The launcher Android lists as the default for the Home button, or null when none is chosen. */
   defaultComponent: string | null
+  /**
+   * The launcher that is actually in charge of the home screen right now (read from the running system).
+   * Some launchers take over Home themselves, so this can differ from the default above.
+   */
+  activeHomePackage: string | null
   /** Stock launchers that were turned off (so they can be turned back on). */
   turnedOff: string[]
 }
 
 export const MAX_LAUNCHERS = 20
+
+/**
+ * Some system apps list themselves for the Home button (settings, first-time setup) but are not launchers.
+ * Making one of them the default would break the home screen, so they are never shown.
+ */
+export function isNotALauncher(packageName: string): boolean {
+  return /^com\.android\.(tv\.)?settings$/.test(packageName) || /provision|setup|wizard/i.test(packageName)
+}
+
+/** Reads `mHomeProcess=ProcessRecord{abc 1234:com.pkg/u0a95}` from the system's activity dump. */
+export function parseActiveHome(output: string): string | null {
+  return /mHomeProcess=ProcessRecord\{[^}]*?\s\d+:([A-Za-z][\w.]*)\//.exec(output)?.[1] ?? null
+}
 
 /** Component names (package/class) from the TV's answer, in order, without repeats. */
 export function parseComponents(output: string): string[] {
@@ -78,6 +98,8 @@ export function parsePackageNames(output: string): Set<string> {
 export const LAUNCHER_READ_SCRIPT = [
   "echo '@@lh-list'",
   LIST_LAUNCHERS_COMMAND,
+  "echo '@@lh-home'",
+  'dumpsys activity activities | grep mHomeProcess',
   "echo '@@lh-default'",
   RESOLVE_LAUNCHER_COMMAND,
   "echo '@@lh-idle'",

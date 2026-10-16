@@ -57,7 +57,13 @@ export function Launcher({ connected, onGoToConnect }: Props): JSX.Element {
     setBusy(false)
   }
 
-  const defaultIsStock = status?.launchers.some((l) => l.isDefault && l.system) ?? false
+  const inCharge = status?.launchers.find((l) => l.isActive) ?? status?.launchers.find((l) => l.isDefault)
+  const stockInCharge = inCharge?.system ?? true
+  const disagree =
+    status !== null &&
+    status.activeHomePackage !== null &&
+    status.defaultComponent !== null &&
+    status.defaultComponent.split('/')[0] !== status.activeHomePackage
   const stockOn = status?.launchers.filter((l) => STOCK_LAUNCHER_PACKAGES.includes(l.packageName)) ?? []
   const otherAvailable = status?.launchers.some((l) => !l.system) ?? false
 
@@ -102,19 +108,27 @@ export function Launcher({ connected, onGoToConnect }: Props): JSX.Element {
             </div>
           )}
 
+          {disagree && (
+            <div className="card">
+              <p>
+                Your TV shows <strong>{status.activeHomePackage}</strong> when you press Home, although Android's list names a different default. That is common with launchers that take over the Home button themselves. It means "Make this the default" may not be needed; "Keep it running" is the setting that matters.
+              </p>
+            </div>
+          )}
+
           {status.launchers.map((l) => (
             <div className="card tweak" key={l.component}>
               <p>
                 <strong>{l.packageName}</strong>{' '}
                 <span className="muted small">
                   {l.system ? 'Came with the TV' : 'Installed by you'}
-                  {l.isDefault ? ' · Home button opens this' : ''}
+                  {l.isActive ? ' · Home button shows this now' : l.isDefault && status.activeHomePackage === null ? ' · Home button opens this' : l.isDefault ? ' · Android\'s default' : ''}
                   {l.running ? ' · running now' : ' · not running now'}
                 </span>
               </p>
               <div className="row">
-                <button type="button" className={l.isDefault ? 'primary' : ''} disabled={busy || l.isDefault} onClick={() => void run(() => window.couchkit.setDefaultLauncher(l.component))}>
-                  {l.isDefault ? 'This is the default' : 'Make this the default'}
+                <button type="button" className={l.isDefault || l.isActive ? 'primary' : ''} disabled={busy || l.isDefault || l.isActive} onClick={() => void run(() => window.couchkit.setDefaultLauncher(l.component))}>
+                  {l.isActive ? 'In charge of Home' : l.isDefault ? (status.activeHomePackage === null ? 'This is the default' : 'Android\'s default') : 'Make this the default'}
                 </button>
                 <button
                   type="button"
@@ -153,10 +167,10 @@ export function Launcher({ connected, onGoToConnect }: Props): JSX.Element {
                   </div>
                 ) : (
                   <div className="row" key={l.packageName}>
-                    <button type="button" disabled={busy || defaultIsStock || !otherAvailable} onClick={() => setConfirmOff(l.packageName)}>
+                    <button type="button" disabled={busy || stockInCharge || !otherAvailable} onClick={() => setConfirmOff(l.packageName)}>
                       Turn off {l.packageName}
                     </button>
-                    {defaultIsStock && <span className="muted small">Make your own launcher the default first.</span>}
+                    {stockInCharge && <span className="muted small">Your own launcher must be in charge of Home first.</span>}
                   </div>
                 )
               )}

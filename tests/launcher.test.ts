@@ -122,3 +122,33 @@ describe('open and force stop', () => {
     expect((await client.forceStopApp(serial, 'com.android.systemui')).ok).toBe(false)
   })
 })
+
+import { isNotALauncher, parseActiveHome } from '../src/shared/launcher'
+
+describe('real-TV behaviours', () => {
+  it('never lists settings or setup screens as launchers', () => {
+    expect(isNotALauncher('com.android.tv.settings')).toBe(true)
+    expect(isNotALauncher('com.google.android.setupwizard')).toBe(true)
+    expect(isNotALauncher('com.android.provision')).toBe(true)
+    expect(isNotALauncher('ca.dstudio.atvlauncher.pro')).toBe(false)
+    expect(isNotALauncher('com.google.android.tvlauncher')).toBe(false)
+  })
+  it('reads the launcher that runs the home screen', () => {
+    expect(parseActiveHome('  mHomeProcess=ProcessRecord{4f1c2d3 1234:ca.dstudio.atvlauncher.pro/u0a105}')).toBe('ca.dstudio.atvlauncher.pro')
+    expect(parseActiveHome('')).toBeNull()
+  })
+  it('knows when a launcher runs Home although Android names another default', async () => {
+    const { client } = setup({ default: STOCK, active: 'com.spocky.projengmenu', disabled: [], idle: [], stopped: [] })
+    const r = await client.launcherStatus(serial)
+    expect(r.ok).toBe(true)
+    if (!r.ok) return
+    expect(r.status.launchers.map((l) => l.packageName)).not.toContain('com.android.tv.settings')
+    expect(r.status.activeHomePackage).toBe('com.spocky.projengmenu')
+    expect(r.status.launchers.find((l) => l.isActive)?.packageName).toBe('com.spocky.projengmenu')
+    expect(r.status.launchers.find((l) => l.isDefault)?.packageName).toBe('com.google.android.tvlauncher')
+  })
+  it('allows turning off the stock launcher when another already runs Home', async () => {
+    const { client } = setup({ default: STOCK, active: 'com.spocky.projengmenu', disabled: [], idle: [], stopped: [] })
+    expect((await client.setStockLauncherEnabled(serial, 'com.google.android.tvlauncher', false)).ok).toBe(true)
+  })
+})
