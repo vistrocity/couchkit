@@ -1,0 +1,88 @@
+/* Follows the system light or dark theme automatically. */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --panel: #f3f4f6;
+  --text: #1f2328;
+  --muted: #5b6470;
+  --border: #d8dce1;
+  --accent: #2563eb;
+  --ok: #15803d;
+  --warn: #b45309;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #16181d;
+    --panel: #1f232a;
+    --text: #e6e8eb;
+    --muted: #9aa3af;
+    --border: #2f353e;
+    --accent: #6ea0ff;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.layout { display: flex; height: 100%; }
+
+.sidebar {
+  width: 200px;
+  flex: none;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  padding: 16px 12px;
+}
+
+.brand { font-size: 18px; margin: 0 8px 16px; }
+
+.sidebar ul { list-style: none; margin: 0; padding: 0; }
+
+.nav {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.nav:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.nav.active { background: color-mix(in srgb, var(--accent) 18%, transparent); font-weight: 600; }
+.nav:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.content { flex: 1; padding: 24px 32px; overflow: auto; }
+h2 { margin: 0 0 4px; font-size: 22px; }
+h3 { margin: 0 0 8px; font-size: 15px; }
+
+.card {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  max-width: 560px;
+}
+
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.ok { color: var(--ok); }
+.warn { color: var(--warn); }
+kbd {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 4px;
+  font: inherit;
+  font-size: 12px;
+}

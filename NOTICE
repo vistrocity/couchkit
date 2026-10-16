@@ -1,0 +1,8 @@
+Couchkit
+Copyright 2026 Couchkit contributors
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Couchkit runs the separately licensed programs "adb" (Android SDK Platform-Tools,
+Google) and, in later versions, "scrcpy" (Genymobile). They are downloaded by
+the user at first run and are not part of this software.
