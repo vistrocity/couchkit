@@ -74,7 +74,17 @@ const api: CouchkitApi = {
   readStorage: () => ipcRenderer.invoke('cleanup:storage'),
   clearCaches: () => ipcRenderer.invoke('cleanup:caches'),
   closeBackgroundApps: () => ipcRenderer.invoke('cleanup:background'),
-  clearAppData: (packageName) => ipcRenderer.invoke('cleanup:app-data', packageName)
+  clearAppData: (packageName) => ipcRenderer.invoke('cleanup:app-data', packageName),
+  clearAppCache: (packageName) => ipcRenderer.invoke('cleanup:app-cache', packageName),
+  backupApps: (packageNames) => ipcRenderer.invoke('backup:run', packageNames),
+  pickBackupFolder: () => ipcRenderer.invoke('backup:pick'),
+  restoreApps: (packageNames) => ipcRenderer.invoke('backup:restore', packageNames),
+  onBackupProgress: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, progress: Parameters<typeof listener>[0]): void => listener(progress)
+    ipcRenderer.on('backup:progress', handler)
+    return () => ipcRenderer.removeListener('backup:progress', handler)
+  },
+  revealBackups: () => ipcRenderer.invoke('backup:reveal')
 }
 
 contextBridge.exposeInMainWorld('couchkit', api)

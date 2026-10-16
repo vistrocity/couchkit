@@ -11,6 +11,9 @@ import { formatHostPort, type HostPort } from '@shared/network'
 import { isRemoteKey, isValidPackageName } from '@shared/remote'
 import { isValidCommand } from '@shared/console'
 import { LIST_SCREENSAVERS_COMMAND, READ_SCRIPT, isValidComponent, parseScreensavers, parseTweakReads, screensaverCommands } from '@shared/tweaks'
+import { mkdirSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
+import { parseApkPaths, remoteApkName, type BackupItemResult } from '@shared/backup'
 import { STORAGE_COMMAND, isProtectedPackage, parseStorage } from '@shared/cleanup'
 import { isDeletablePath, isValidRemotePath, joinRemotePath, normalizeRemotePath } from '@shared/tvpath'
 import type {
@@ -456,6 +459,55 @@ export class AdbClient {
     const text = `${result.stdout}\n${result.stderr}`.trim()
     if (/\bSuccess\b/.test(text)) return { ok: true, detail: 'Data cleared.' }
     return actionFail(result.category ?? 'other', 'The TV did not clear the app.', 'Some apps are protected by the TV.', text)
+  }
+
+  /** Clears only the temporary files of one app. */
+  async clearAppCache(serial: string, packageName: string): Promise<ActionResult> {
+    if (!isValidPackageName(packageName)) return actionFail('other', 'That is not a valid app name.', '', String(packageName).slice(0, 100))
+    const result = await this.shell(serial, ['pm', 'clear', '--cache-only', packageName], 60_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (/\bSuccess\b/.test(text)) return { ok: true, detail: 'Cache cleared.' }
+    return actionFail(
+      result.category ?? 'other',
+      'The TV did not clear this app\'s cache.',
+      'Some TVs do not allow this from a computer. "Clear caches" on the Cleanup page clears every app at once, or use the app\'s own settings on the TV.',
+      text
+    )
+  }
+
+  /** Copies one installed app's .apk files into <destRoot>/<package>/ on this computer. */
+  async pullApp(serial: string, packageName: string, destRoot: string): Promise<BackupItemResult> {
+    if (!isValidPackageName(packageName)) return { packageName, ok: false, message: 'That is not a valid app name.' }
+    const found = await this.shell(serial, ['pm', 'path', packageName], 30_000)
+    const paths = found.ok ? parseApkPaths(found.stdout) : []
+    if (paths.length === 0) {
+      return { packageName, ok: false, message: 'The TV did not say where this app\'s files are.', fix: 'Apps that came with the TV cannot be saved this way.' }
+    }
+    const dest = join(destRoot, packageName)
+    mkdirSync(dest, { recursive: true })
+    for (const remote of paths) {
+      const pulled = await this.run(['-s', serial, 'pull', remote, join(dest, remoteApkName(remote))], 600_000)
+      if (!(pulled.ok && /\bpulled\b/.test(`${pulled.stdout}\n${pulled.stderr}`))) {
+        rmSync(dest, { recursive: true, force: true })
+        const failure = transferFailure(pulled.category, `${pulled.stdout}\n${pulled.stderr}`.trim(), 'The app\'s files could not be copied.')
+        return { packageName, ok: false, message: failure.ok ? 'The app could not be saved.' : failure.message, ...(failure.ok ? {} : { fix: failure.fix }) }
+      }
+    }
+    return { packageName, ok: true, message: paths.length > 1 ? `Saved (${paths.length} parts).` : 'Saved.' }
+  }
+
+  /** Installs one app from its saved .apk files (several files = an app made of parts). */
+  async installSaved(serial: string, packageName: string, files: readonly string[]): Promise<BackupItemResult> {
+    const args = files.length === 1 ? ['install', '-r', files[0] ?? ''] : ['install-multiple', '-r', ...files]
+    const result = await this.run(['-s', serial, ...args], 600_000)
+    const text = `${result.stdout}\n${result.stderr}`
+    if (result.ok && /\bSuccess\b/.test(text)) return { packageName, ok: true, message: 'Restored.' }
+    if (!result.ok && result.category !== undefined && result.category !== 'other' && !/INSTALL_/.test(text)) {
+      const { message, fix } = explainFailure(result.category)
+      return { packageName, ok: false, message, fix }
+    }
+    const reason = explainInstallFailure(text)
+    return { packageName, ok: false, message: reason.message, fix: reason.fix }
   }
 
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {

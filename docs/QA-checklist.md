@@ -129,4 +129,10 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 97. "Close background apps": a plain "Done" message appears.
 98. Apps page: "Clear data" asks "Delete all of this app's data?" with Yes/No. After Yes, open that app on the TV: it starts like new (logged out). Try it on a harmless app first.
 99. Apps page: "Clear data" on a protected system app (for example com.android.providers.settings, in the "all apps" filter) is refused with a plain message.
+100. Apps page: each app has a "Clear cache" button. It says "Cache cleared." (or explains that this TV does not allow it). The app keeps its login.
+101. Backup page: the list shows apps you installed. Tick the "only apps not from the Play Store" box to hide Play Store apps.
+102. Tick one or two small apps and press "Back up". It says how many are done. "Show backup folder" opens a folder named Couchkit-backup-<date> (inside Documents > Couchkit > Backups) with one sub-folder per app holding its .apk file(s).
+103. Uninstall one of those apps from the Apps page, then on Backup press "Choose backup folder…", pick the backup, tick the app and press "Restore". The app is back on the TV (it opens logged out, because only the app is saved, not its data).
+104. Restoring an app that is already on the TV at the same version just reinstalls it; restoring an older version over a newer one says "A newer version of this app is already on the TV."
+105. An app that cannot be saved (for example one that came with the TV) is listed with a plain reason.
 

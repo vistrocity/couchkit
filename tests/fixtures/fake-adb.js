@@ -47,6 +47,7 @@ if (args[0] === 'version') {
   if (process.env.FAKE_ADB_STOPFILE) require('fs').writeFileSync(process.env.FAKE_ADB_STOPFILE, 'stop')
 } else if (args[0] === '-s' && (args[2] === 'pull' || args[2] === 'push')) {
   if (args[2] === 'pull' && /couchkit-shot/.test(args[3])) require('fs').writeFileSync(args[4], Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'))
+  if (args[2] === 'pull' && /^\/data\/app\//.test(args[3])) require('fs').writeFileSync(args[4], 'fake apk bytes')
   if (args[2] === 'pull' && /couchkit-rec/.test(args[3])) {
     if (process.env.FAKE_ADB_RECFAIL) { process.stderr.write("adb: error: failed to stat remote object '" + args[3] + "': No such file or directory\n"); process.exit(1) }
     require('fs').writeFileSync(args[4], 'fake mp4')
@@ -63,6 +64,16 @@ if (args[0] === 'version') {
   else out('package:com.example.user  installer=com.android.vending  versionCode:12\npackage:com.example.off  installer=null  versionCode:3\npackage:com.android.tv  installer=null  versionCode:30')
 } else if (args[0] === '-s' && args[2] === 'shell' && /dumpsys package packages/.test(args[3] || '')) {
   out('  Package [com.example.user] (a1):\n    versionName=1.2.3\n  Package [com.android.tv] (b2):\n    versionName=9')
+} else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'pm' && args[4] === 'path') {
+  const pkg = args[5]
+  if (/^com\.missing/.test(pkg)) { out('') }
+  else {
+    out('package:/data/app/~~abc==/' + pkg + '-xyz==/base.apk')
+    if (/split/.test(pkg)) out('package:/data/app/~~abc==/' + pkg + '-xyz==/split_config.en.apk')
+  }
+} else if (args[0] === '-s' && args[2] === 'install-multiple') {
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, args.slice(2).join(' ') + '\n')
+  out('Created parent session ID 1\nSuccess')
 } else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'pm') {
   out(args[4] === 'disable-user' ? 'Package ' + args[7] + ' new state: disabled-user' : args[4] === 'enable' ? 'Package ' + args[5] + ' new state: enabled' : 'Success')
 } else if (args[0] === '-s' && args[2] === 'install') {

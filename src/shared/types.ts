@@ -232,6 +232,8 @@ export type StorageResult = { ok: true; totalKb: number; freeKb: number } | Fail
 /** Result of asking the TV to clear its app caches. */
 export type TrimCachesResult = { ok: true; freeBeforeKb: number | null; freeAfterKb: number | null } | Failed
 
+import type { BackupProgress, BackupRunResult, BackupScan, BackupItemResult } from './backup'
+
 /** What the UI is allowed to ask the main process to do. */
 export interface CouchkitApi {
   getAppInfo(): Promise<AppInfo>
@@ -312,6 +314,16 @@ export interface CouchkitApi {
   clearCaches(): Promise<TrimCachesResult>
   closeBackgroundApps(): Promise<ActionResult>
   clearAppData(packageName: string): Promise<ActionResult>
+  clearAppCache(packageName: string): Promise<ActionResult>
+
+  /** Saves the chosen apps (their .apk files, not their data) to a new folder on this computer. */
+  backupApps(packageNames: string[]): Promise<BackupRunResult>
+  /** Lets the person pick a backup folder; null if they cancel. */
+  pickBackupFolder(): Promise<BackupScan | null>
+  /** Puts the chosen apps from the picked (or just made) backup folder back on the TV. */
+  restoreApps(packageNames: string[]): Promise<BackupItemResult[]>
+  onBackupProgress(listener: (progress: BackupProgress) => void): () => void
+  revealBackups(): Promise<void>
 }
 
 declare global {

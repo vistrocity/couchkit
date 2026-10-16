@@ -257,6 +257,9 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
                 <button type="button" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.setAppEnabled(a.packageName, !a.enabled))}>
                   {a.enabled ? 'Disable' : 'Enable'}
                 </button>
+                <button type="button" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.clearAppCache(a.packageName))}>
+                  Clear cache
+                </button>
                 <button type="button" disabled={busyPackage !== null} onClick={() => setConfirmClear(a.packageName)}>
                   Clear data
                 </button>

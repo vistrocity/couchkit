@@ -4,8 +4,11 @@ import { basename, isAbsolute, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
 import { AdbClient, type RecordingHandle } from './adb/client'
 import { findTvs } from './discovery'
+import { scanBackupFolder } from './backup'
+import { backupFolderName, type BackupItemResult, type BackupRunResult, type BackupScan } from '@shared/backup'
+import { isValidPackageName } from '@shared/remote'
 import { clockCommands, densityRestore, findChoice, findTweak, isValidDensity } from '@shared/tweaks'
-import { captureFileName, isRecordingPreset } from './adb/capture'
+import { captureFileName, isRecordingPreset, timeStamp } from './adb/capture'
 import { installPlatformTools, platformToolsUrl } from './adb/install'
 import { runCommand, type LogSink } from './adb/runner'
 import { platform } from './platform'
@@ -525,6 +528,75 @@ export function registerIpc(): void {
     const s = session()
     if (!('client' in s)) return s
     return s.client.clearAppData(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
+
+  ipcMain.handle('cleanup:app-cache', async (_event, packageName: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.clearAppCache(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
+
+  // ---- Backup and restore ----
+
+  const backupsRoot = (): string => join(app.getPath('documents'), 'Couchkit', 'Backups')
+  /** The folder the next restore may read: the one just made, or the one the person picked. */
+  let backupFolder: string | null = null
+
+  ipcMain.handle('backup:run', async (event, packageNames: unknown): Promise<BackupRunResult> => {
+    const list = Array.isArray(packageNames) ? packageNames.filter(isValidPackageName).slice(0, 500) : []
+    const s = session()
+    if (!('client' in s)) return { folder: null, results: [{ packageName: '', ok: false, message: s.ok ? '' : s.message, ...(s.ok ? {} : { fix: s.fix }) }] }
+    if (list.length === 0) return { folder: null, results: [] }
+    const folder = join(backupsRoot(), backupFolderName(timeStamp(new Date())))
+    mkdirSync(folder, { recursive: true })
+    const results: BackupItemResult[] = []
+    for (const [i, name] of list.entries()) {
+      if (!event.sender.isDestroyed()) event.sender.send('backup:progress', { phase: 'backup', index: i + 1, total: list.length, name })
+      results.push(await s.client.pullApp(s.serial, name, folder))
+    }
+    backupFolder = folder
+    return { folder, results }
+  })
+
+  ipcMain.handle('backup:pick', async (event): Promise<BackupScan | null> => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    mkdirSync(backupsRoot(), { recursive: true })
+    const options = {
+      title: 'Choose a Couchkit backup folder',
+      defaultPath: backupsRoot(),
+      properties: ['openDirectory'] as Array<'openDirectory'>
+    }
+    const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
+    if (result.canceled || result.filePaths[0] === undefined) return null
+    backupFolder = result.filePaths[0]
+    return { folder: backupFolder, apps: scanBackupFolder(backupFolder) }
+  })
+
+  ipcMain.handle('backup:restore', async (event, packageNames: unknown): Promise<BackupItemResult[]> => {
+    const wanted = Array.isArray(packageNames) ? packageNames.filter(isValidPackageName).slice(0, 500) : []
+    const s = session()
+    if (!('client' in s)) return [{ packageName: '', ok: false, message: s.ok ? '' : s.message, ...(s.ok ? {} : { fix: s.fix }) }]
+    if (backupFolder === null) return [{ packageName: '', ok: false, message: 'Choose a backup folder first.' }]
+    const folder = backupFolder
+    // Only apps really present in the folder are restored.
+    const available = new Map(scanBackupFolder(folder).map((a) => [a.packageName, a]))
+    const results: BackupItemResult[] = []
+    for (const [i, name] of wanted.entries()) {
+      const entry = available.get(name)
+      if (!event.sender.isDestroyed()) event.sender.send('backup:progress', { phase: 'restore', index: i + 1, total: wanted.length, name })
+      if (entry === undefined) {
+        results.push({ packageName: name, ok: false, message: 'This app is not in the backup folder.' })
+        continue
+      }
+      results.push(await s.client.installSaved(s.serial, name, entry.files.map((f) => join(folder, name, f))))
+    }
+    return results
+  })
+
+  ipcMain.handle('backup:reveal', (): void => {
+    const target = backupFolder ?? backupsRoot()
+    mkdirSync(backupsRoot(), { recursive: true })
+    if (existsSync(target)) platform.revealInFolder(target)
   })
 
   // ---- Console ----
