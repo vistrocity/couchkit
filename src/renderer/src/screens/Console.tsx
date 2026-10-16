@@ -193,39 +193,54 @@ export function Console({ connected, onGoToConnect, command, onCommandChange: se
           ))}
         </section>
         </div>
-        <aside className="console-results" aria-label="Results">
-          {latest === undefined ? (
-            <p className="muted">Results appear here. Run a command or click a shortcut.</p>
-          ) : (
-            <>
-              <div className="row">
-                <h3 id="output-heading" className="grow">
-                  <code>{latest.command}</code>
-                </h3>
-                <button type="button" onClick={() => void copy(latest.result.output)} disabled={latest.result.output === ''}>
-                  {copied ? 'Copied ✓' : 'Copy'}
-                </button>
-                <button type="button" onClick={() => setRuns([])}>
-                  Clear
-                </button>
-              </div>
-              <p className={latest.result.ok ? 'muted small' : 'warn small'} aria-live="polite">
-                {latest.result.message ??
-                  (latest.result.ok ? 'Finished' : `The TV reported an error (exit code ${latest.result.exitCode ?? '?'})`)}{' '}
-                · {latest.result.durationMs} ms
+        <aside className="terminal" aria-label="Results">
+          <div className="term-bar">
+            <span className="term-dots" aria-hidden="true">
+              <i /> <i /> <i />
+            </span>
+            <span className="term-title">
+              couchkit@{(connected.model ?? connected.host).replace(/\s+/g, '-')}: ~
+            </span>
+            <span className="term-actions">
+              <button type="button" onClick={() => void copy(latest?.result.output ?? '')} disabled={latest === undefined || latest.result.output === ''}>
+                {copied ? 'copied ✓' : 'copy'}
+              </button>
+              <button type="button" onClick={() => setRuns([])} disabled={runs.length === 0}>
+                clear
+              </button>
+            </span>
+          </div>
+          <div className="term-body" aria-live="polite">
+            {latest === undefined ? (
+              <p className="term-dim">
+                {'>'} ready. Run a command or click a shortcut<span className="term-cursor" aria-hidden="true" />
               </p>
-              <pre className="output">{latest.result.output === '' ? '(no output)' : latest.result.output}</pre>
-              {latest.result.truncated && <p className="muted small">The output was very long, so only the first part is shown.</p>}
-            </>
-          )}
+            ) : (
+              <>
+                <p className="term-cmd">
+                  <span className="term-prompt">$</span> {latest.command}
+                </p>
+                <pre className={latest.result.ok ? 'term-out' : 'term-out term-err'}>{latest.result.output === '' ? '(no output)' : latest.result.output}</pre>
+                {latest.result.truncated && <p className="term-dim">-- output cut: it was very long --</p>}
+                <p className={latest.result.ok ? 'term-dim' : 'term-warn'}>
+                  {latest.result.message !== undefined
+                    ? `[!] ${latest.result.message}`
+                    : latest.result.ok
+                      ? `[ok] ${latest.result.durationMs} ms`
+                      : `[exit ${latest.result.exitCode ?? '?'}] ${latest.result.durationMs} ms`}
+                  <span className="term-cursor" aria-hidden="true" />
+                </p>
+              </>
+            )}
+          </div>
           {runs.length > 1 && (
-            <div className="recent-box">
-              <h3 id="recent-heading">Earlier in this session</h3>
-              <ul className="recent">
+            <div className="term-history">
+              <p className="term-dim">-- earlier --</p>
+              <ul>
                 {runs.slice(1).map((r) => (
                   <li key={r.at}>
-                    <button type="button" className="crumb mono" onClick={() => setCommand(r.command)} title="Put this back in the box">
-                      {r.command}
+                    <button type="button" onClick={() => setCommand(r.command)} title="Put this back in the box">
+                      <span className="term-prompt">$</span> {r.command}
                     </button>
                   </li>
                 ))}
