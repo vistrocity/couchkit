@@ -3,7 +3,7 @@ import type { AdbStatus, AppInfo, DeviceInfo } from '@shared/types'
 import { Activity } from './screens/Activity'
 import { Capture } from './screens/Capture'
 import { Connect } from './screens/Connect'
-import { Console } from './screens/Console'
+import { Console, type ConsoleRun } from './screens/Console'
 import { Apps } from './screens/Apps'
 import { Files } from './screens/Files'
 import { Home } from './screens/Home'
@@ -29,6 +29,13 @@ export function App(): JSX.Element {
   const [adb, setAdb] = useState<AdbStatus | null>(null)
   const [connected, setConnected] = useState<DeviceInfo | null>(null)
   const [focusToken, setFocusToken] = useState(0)
+  // Console work is kept here so it survives switching tabs. It is cleared when the TV changes or disconnects.
+  const [consoleCommand, setConsoleCommand] = useState('')
+  const [consoleRuns, setConsoleRuns] = useState<ConsoleRun[]>([])
+  const connectedSerial = connected?.serial ?? null
+  useEffect(() => {
+    setConsoleRuns([])
+  }, [connectedSerial])
 
   const refreshAdb = useCallback(() => {
     void window.couchkit.checkAdb().then(setAdb)
@@ -100,7 +107,14 @@ export function App(): JSX.Element {
           {section === 'remote' && <Remote connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'apps' && <Apps connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'capture' && <Capture connected={connected} onGoToConnect={() => setSection('connect')} />}
-          {section === 'console' && <Console connected={connected} onGoToConnect={() => setSection('connect')} />}
+          {section === 'console' && <Console
+              connected={connected}
+              onGoToConnect={() => setSection('connect')}
+              command={consoleCommand}
+              onCommandChange={setConsoleCommand}
+              runs={consoleRuns}
+              onRunsChange={setConsoleRuns}
+            />}
           {section === 'files' && <Files connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'log' && <Activity />}
           {!['home', 'connect', 'remote', 'apps', 'files', 'capture', 'console', 'log'].includes(section) && (
