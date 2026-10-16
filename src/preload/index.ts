@@ -28,7 +28,12 @@ const api: CouchkitApi = {
   isElevated: () => ipcRenderer.invoke('app:elevated'),
   listApps: () => ipcRenderer.invoke('apps:list'),
   pickApks: () => ipcRenderer.invoke('apps:pick'),
-  pathForFile: (file) => webUtils.getPathForFile(file),
+  pathForFile: (file) => {
+    const path = webUtils.getPathForFile(file)
+    // Only a file the person really dropped has a path; tell the main process so it will accept it.
+    if (path !== '') ipcRenderer.send('drop:register', path)
+    return path
+  },
   installApks: (paths) => ipcRenderer.invoke('apps:install', paths),
   onApkProgress: (listener) => {
     const handler = (_event: unknown, progress: ApkInstallProgress): void => listener(progress)

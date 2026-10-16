@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from 'electron'
+import { app, BrowserWindow, Menu, session } from 'electron'
 import { join } from 'node:path'
 import { registerIpc } from './ipc'
 import { buildMenu } from './menu'
@@ -26,6 +26,8 @@ function createWindow(): void {
   // The UI never opens other windows or navigates away.
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event) => event.preventDefault())
+  window.webContents.on('will-redirect', (event) => event.preventDefault())
+  window.webContents.on('will-attach-webview', (event) => event.preventDefault())
 
   const devUrl = process.env['ELECTRON_RENDERER_URL']
   if (devUrl) {
@@ -36,6 +38,9 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Couchkit never needs the camera, microphone, location and so on: refuse every permission request.
+  session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
+  session.defaultSession.setPermissionCheckHandler(() => false)
   Menu.setApplicationMenu(buildMenu())
   registerIpc()
   createWindow()

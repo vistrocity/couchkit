@@ -5,6 +5,7 @@ import { checkAdb, findAdb } from './adb/adb'
 import { AdbClient, type RecordingHandle } from './adb/client'
 import { findTvs } from './discovery'
 import { scanBackupFolder } from './backup'
+import { KnownPaths } from './known-paths'
 import { backupFolderName, type BackupItemResult, type BackupRunResult, type BackupScan } from '@shared/backup'
 import { isValidPackageName } from '@shared/remote'
 import { clockCommands, densityRestore, findChoice, findTweak, isValidDensity } from '@shared/tweaks'
@@ -59,6 +60,8 @@ import type {
 export function registerIpc(): void {
   const activityLog = new ActivityLog()
   const history = new HistoryStore(join(platform.dataDir(), 'history.json'))
+  const knownPaths = new KnownPaths()
+  ipcMain.on('drop:register', (_event, path: unknown) => knownPaths.add(path))
   const settings = new SettingsStore(join(platform.dataDir(), 'settings.json'))
   let logEnabled = false
   void settings.load().then((v) => {
@@ -250,7 +253,9 @@ export function registerIpc(): void {
       filters: [{ name: 'Android apps (.apk)', extensions: ['apk'] }]
     }
     const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
-    return result.canceled ? [] : result.filePaths
+    if (result.canceled) return []
+    knownPaths.addAll(result.filePaths)
+    return result.filePaths
   })
 
   ipcMain.handle('apps:install', async (event, paths: unknown): Promise<ApkInstallResult[]> => {
@@ -261,6 +266,10 @@ export function registerIpc(): void {
       const name = basename(path)
       if (!('client' in s)) {
         results.push({ path, name, ok: false, message: s.ok ? '' : s.message, ...(s.ok ? {} : { fix: s.fix }) })
+        continue
+      }
+      if (!knownPaths.has(path)) {
+        results.push({ path, name, ok: false, message: 'That file was not chosen in Couchkit.', fix: 'Drop it on the window or use "Choose files…".' })
         continue
       }
       if (!path.toLowerCase().endsWith('.apk') || !existsSync(path)) {
@@ -323,7 +332,9 @@ export function registerIpc(): void {
       properties: (folder ? ['openDirectory'] : ['openFile', 'multiSelections']) as Array<'openDirectory' | 'openFile' | 'multiSelections'>
     }
     const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
-    return result.canceled ? [] : result.filePaths
+    if (result.canceled) return []
+    knownPaths.addAll(result.filePaths)
+    return result.filePaths
   })
 
   ipcMain.handle('files:upload', async (event, remoteDir: unknown, paths: unknown): Promise<TransferResult[]> => {
@@ -334,6 +345,10 @@ export function registerIpc(): void {
       const name = basename(path)
       if (!('client' in s)) {
         results.push({ name, ok: false, message: s.ok ? '' : s.message, ...(s.ok ? {} : { fix: s.fix }) })
+        continue
+      }
+      if (!knownPaths.has(path)) {
+        results.push({ name, ok: false, message: 'That file was not chosen in Couchkit.', fix: 'Drop it on the window or use the upload buttons.' })
         continue
       }
       if (!isAbsolute(path) || !existsSync(path)) {
