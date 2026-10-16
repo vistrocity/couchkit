@@ -193,7 +193,8 @@ code { font-family: ui-monospace, 'Cascadia Mono', Menlo, monospace; font-size: 
 .dropzone.dragging { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .results { padding-left: 18px; }
 .toolbar { margin: 12px 0; }
-select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: inherit; }
+select { font: inherit; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background-color: var(--panel); color: var(--text); }
+select option { background-color: var(--panel); color: var(--text); }
 .applist { list-style: none; margin: 0; padding: 0; }
 .card.app { display: flex; gap: 12px; align-items: center; margin-top: 8px; padding: 10px 14px; }
 
