@@ -254,6 +254,12 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
               </div>
             ) : (
               <div className="row">
+                <button type="button" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.openApp(a.packageName))}>
+                  Open
+                </button>
+                <button type="button" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.forceStopApp(a.packageName))}>
+                  Force stop
+                </button>
                 <button type="button" disabled={busyPackage !== null} onClick={() => void act(a.packageName, () => window.couchkit.setAppEnabled(a.packageName, !a.enabled))}>
                   {a.enabled ? 'Disable' : 'Enable'}
                 </button>

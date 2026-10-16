@@ -11,6 +11,23 @@ import { formatHostPort, type HostPort } from '@shared/network'
 import { isRemoteKey, isValidPackageName } from '@shared/remote'
 import { isValidCommand } from '@shared/console'
 import { LIST_SCREENSAVERS_COMMAND, READ_SCRIPT, isValidComponent, parseScreensavers, parseTweakReads, screensaverCommands } from '@shared/tweaks'
+import {
+  LAUNCHER_READ_SCRIPT,
+  MAX_LAUNCHERS,
+  STOCK_LAUNCHER_PACKAGES,
+  keepAliveCommands,
+  packageOf,
+  parseComponents,
+  parseDefaultLauncher,
+  parsePackageNames,
+  parsePids,
+  parseWhitelist,
+  pidScript,
+  setDefaultCommand,
+  splitMarked,
+  type LauncherInfo,
+  type LauncherStatus
+} from '@shared/launcher'
 import { HARDWARE_SCRIPT, parseHardware } from '@shared/hardware'
 import { mkdirSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
@@ -551,6 +568,114 @@ export class AdbClient {
       result.category === 'timeout' ? 'It took too long. The TV may still be working; wait a few minutes and check it is not slow.' : 'Some TVs do not allow this from a computer.',
       text.slice(-1500)
     )
+  }
+
+  /** Which launchers are installed, which one Home opens, and whether each is running and kept alive. */
+  async launcherStatus(serial: string): Promise<{ ok: true; status: LauncherStatus } | { ok: false; message: string; fix: string; detail: string }> {
+    const first = await this.shell(serial, [LAUNCHER_READ_SCRIPT], 45_000)
+    if (!first.ok && first.stdout.trim() === '') {
+      const { message, fix } = explainFailure(first.category ?? 'other')
+      return { ok: false, message, fix, detail: (first.stderr || first.stdout).trim() }
+    }
+    const parts = splitMarked(first.stdout)
+    const components = parseComponents(parts.get('lh-list') ?? '').slice(0, MAX_LAUNCHERS)
+    if (components.length === 0) {
+      return { ok: false, message: 'The TV did not list any launchers.', fix: 'This TV may not support the launcher check.', detail: first.stdout.slice(0, 1500) }
+    }
+    const defaultComponent = parseDefaultLauncher(parts.get('lh-default') ?? '')
+    const whitelist = parseWhitelist(parts.get('lh-idle') ?? '')
+    const disabled = parsePackageNames(parts.get('lh-disabled') ?? '')
+    const system = parsePackageNames(parts.get('lh-system') ?? '')
+    const packages = [...new Set(components.map(packageOf))]
+    const pids = await this.shell(serial, [pidScript(packages)], 30_000)
+    const running = parsePids(pids.stdout)
+    const launchers: LauncherInfo[] = components.map((component) => {
+      const pkg = packageOf(component)
+      return {
+        component,
+        packageName: pkg,
+        system: system.has(pkg),
+        isDefault: component === defaultComponent,
+        running: running.has(pkg),
+        keepAlive: whitelist.has(pkg)
+      }
+    })
+    const turnedOff = STOCK_LAUNCHER_PACKAGES.filter((p) => disabled.has(p))
+    return { ok: true, status: { launchers, defaultComponent, turnedOff } }
+  }
+
+  /** Makes a launcher the one the Home button opens. Only launchers the TV lists are accepted. */
+  async setDefaultLauncher(serial: string, component: string): Promise<ActionResult> {
+    const status = await this.launcherStatus(serial)
+    if (!status.ok) return actionFail('other', status.message, status.fix, status.detail)
+    if (!status.status.launchers.some((l) => l.component === component)) {
+      return actionFail('other', 'That launcher is not installed on the TV.', 'Press Refresh and choose again.', component)
+    }
+    const result = await this.shell(serial, [setDefaultCommand(component)], 30_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    const after = await this.launcherStatus(serial)
+    if (after.ok && after.status.defaultComponent === component) return { ok: true, detail: 'Done. Press Home on the TV remote to see it.' }
+    return actionFail(
+      result.category ?? 'other',
+      'The TV did not switch its home screen.',
+      'Some TVs keep their own launcher fixed. Try "Turn off the stock launcher" on this page, or see the technical details.',
+      text
+    )
+  }
+
+  /** Turns "keep alive" (no battery saving) on or off for a launcher. */
+  async setLauncherKeepAlive(serial: string, packageName: string, on: boolean): Promise<ActionResult> {
+    const status = await this.launcherStatus(serial)
+    if (!status.ok) return actionFail('other', status.message, status.fix, status.detail)
+    if (!status.status.launchers.some((l) => l.packageName === packageName)) {
+      return actionFail('other', 'That launcher is not installed on the TV.', 'Press Refresh and choose again.', packageName)
+    }
+    return this.runSettingsCommands(serial, keepAliveCommands(packageName, on))
+  }
+
+  /**
+   * Turns a stock launcher off (for your user only; reversible) or back on.
+   * Turning off is refused unless a different launcher is installed, on and already the default,
+   * so the TV can never be left without a home screen by this button.
+   */
+  async setStockLauncherEnabled(serial: string, packageName: string, enabled: boolean): Promise<ActionResult> {
+    if (!STOCK_LAUNCHER_PACKAGES.includes(packageName)) return actionFail('other', 'That is not a stock launcher.', '', packageName.slice(0, 100))
+    if (!enabled) {
+      const status = await this.launcherStatus(serial)
+      if (!status.ok) return actionFail('other', status.message, status.fix, status.detail)
+      const def = status.status.defaultComponent
+      const others = status.status.launchers.filter((l) => l.packageName !== packageName)
+      if (others.length === 0 || def === null || packageOf(def) === packageName) {
+        return actionFail(
+          'other',
+          'Choose your own launcher as the default first.',
+          'Couchkit only turns off the stock launcher when another launcher is installed and already opens when you press Home.',
+          ''
+        )
+      }
+    }
+    return this.setEnabled(serial, packageName, enabled)
+  }
+
+  /** Opens an app on the TV. */
+  async openApp(serial: string, packageName: string): Promise<ActionResult> {
+    if (!isValidPackageName(packageName)) return actionFail('other', 'That is not a valid app name.', '', String(packageName).slice(0, 100))
+    for (const category of ['android.intent.category.LEANBACK_LAUNCHER', 'android.intent.category.LAUNCHER']) {
+      const result = await this.shell(serial, ['monkey', '-p', packageName, '-c', category, '1'], 30_000)
+      const text = `${result.stdout}\n${result.stderr}`
+      if (result.ok && /Events injected: 1/.test(text)) return { ok: true, detail: 'Opened on the TV.' }
+    }
+    return actionFail('other', 'The TV could not open this app.', 'Some apps (system services, for example) have no screen to open.', packageName)
+  }
+
+  /** Stops an app that is running (like "Force stop" in the TV settings). */
+  async forceStopApp(serial: string, packageName: string): Promise<ActionResult> {
+    if (!isValidPackageName(packageName)) return actionFail('other', 'That is not a valid app name.', '', String(packageName).slice(0, 100))
+    if (isProtectedPackage(packageName)) return actionFail('other', 'Couchkit will not stop this app.', 'Stopping it could freeze the screen or settings of the TV.', packageName)
+    const result = await this.shell(serial, ['am', 'force-stop', packageName], 30_000)
+    const text = `${result.stdout}\n${result.stderr}`.trim()
+    if (result.ok && !/exception|error|denied/i.test(text)) return { ok: true, detail: 'Stopped.' }
+    return actionFail(result.category ?? 'other', 'The TV did not stop the app.', 'Some apps are protected by the TV.', text)
   }
 
   private async readDeviceInfo(target: HostPort): Promise<DeviceInfo> {

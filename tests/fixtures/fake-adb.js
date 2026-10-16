@@ -64,6 +64,12 @@ if (args[0] === 'version') {
   else out('package:com.example.user  installer=com.android.vending  versionCode:12\npackage:com.example.off  installer=null  versionCode:3\npackage:com.android.tv  installer=null  versionCode:30')
 } else if (args[0] === '-s' && args[2] === 'shell' && /dumpsys package packages/.test(args[3] || '')) {
   out('  Package [com.example.user] (a1):\n    versionName=1.2.3\n  Package [com.android.tv] (b2):\n    versionName=9')
+} else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'monkey') {
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + args.slice(3).join(' ') + '\n')
+  if (/com\.noscreen/.test(args[5])) out('** No activities found to run, monkey aborted.')
+  else out('Events injected: 1\n## Network stats: elapsed time=5ms')
+} else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'am' && args[4] === 'force-stop') {
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + args.slice(3).join(' ') + '\n')
 } else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'pm' && args[4] === 'path') {
   const pkg = args[5]
   if (/^com\.missing/.test(pkg)) { out('') }
@@ -75,12 +81,53 @@ if (args[0] === 'version') {
   require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, args.slice(2).join(' ') + '\n')
   out('Created parent session ID 1\nSuccess')
 } else if (args[0] === '-s' && args[2] === 'shell' && args[3] === 'pm') {
+  require('fs').appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + args.slice(3).join(' ') + '\n')
+  if (process.env.FAKE_ADB_LAUNCHER && (args[4] === 'disable-user' || args[4] === 'enable')) {
+    const fs = require('fs')
+    const st = fs.existsSync(process.env.FAKE_ADB_LAUNCHER) ? JSON.parse(fs.readFileSync(process.env.FAKE_ADB_LAUNCHER, 'utf8')) : { default: 'com.google.android.tvlauncher/.MainActivity', disabled: [], idle: [], stopped: [] }
+    const pkg = args[4] === 'disable-user' ? args[7] : args[5]
+    st.disabled = st.disabled.filter((x) => x !== pkg)
+    if (args[4] === 'disable-user') st.disabled.push(pkg)
+    fs.writeFileSync(process.env.FAKE_ADB_LAUNCHER, JSON.stringify(st))
+  }
   out(args[4] === 'disable-user' ? 'Package ' + args[7] + ' new state: disabled-user' : args[4] === 'enable' ? 'Package ' + args[5] + ' new state: enabled' : 'Success')
 } else if (args[0] === '-s' && args[2] === 'install') {
   if (/bad/.test(args[4])) out('Performing Streamed Install\nadb: failed to install ' + args[4] + ': Failure [INSTALL_FAILED_VERSION_DOWNGRADE]')
   else out('Performing Streamed Install\nSuccess')
 } else if (args[0] === '-s' && args[2] === 'uninstall') {
   out('Success')
+} else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^(echo '@@lh-|echo @@lh-pid)/.test(args[3])) {
+  // Launcher emulator (state in FAKE_ADB_LAUNCHER: {default, disabled[], idle[], stopped[]}).
+  const fs = require('fs')
+  const file = process.env.FAKE_ADB_LAUNCHER
+  const st = file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { default: 'com.google.android.tvlauncher/.MainActivity', disabled: [], idle: [], stopped: [] }
+  fs.appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + args[3] + '\n')
+  const all = ['com.google.android.tvlauncher/.MainActivity', 'com.spocky.projengmenu/.ui.home.MainActivity']
+  const lines = []
+  for (const part of args[3].split('; ')) {
+    let m
+    if ((m = /^echo '(.*)'$/.exec(part))) lines.push(m[1])
+    else if ((m = /^echo @@lh-pid (\S+) \$\(pidof \S+\)$/.exec(part))) lines.push('@@lh-pid ' + m[1] + ' ' + (st.disabled.includes(m[1]) || st.stopped.includes(m[1]) ? '' : '4321'))
+    else if (/^cmd package query-activities/.test(part)) { for (const c of all) if (!st.disabled.includes(c.split('/')[0])) lines.push('priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false', c) }
+    else if (/^cmd package resolve-activity/.test(part)) lines.push('priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true', st.default || 'android/com.android.internal.app.ResolverActivity')
+    else if (part === 'dumpsys deviceidle whitelist') { lines.push('system-excidle,com.android.shell,2000'); for (const p of st.idle) lines.push('user,' + p + ',10123') }
+    else if (part === 'pm list packages -d') { for (const p of st.disabled) lines.push('package:' + p) }
+    else if (part === 'pm list packages -s') lines.push('package:com.google.android.tvlauncher', 'package:com.android.shell')
+    else lines.push('Error: unknown command: ' + part)
+  }
+  out(lines.join('\n'))
+} else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^(cmd package set-home-activity|dumpsys deviceidle whitelist [+-]|cmd appops set)/.test(args[3])) {
+  const fs = require('fs')
+  const file = process.env.FAKE_ADB_LAUNCHER
+  const st = file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { default: 'com.google.android.tvlauncher/.MainActivity', disabled: [], idle: [], stopped: [] }
+  fs.appendFileSync(process.env.FAKE_ADB_LOG || require('os').devNull, 'shell ' + args[3] + '\n')
+  let m
+  for (const part of args[3].split('; ')) {
+    if ((m = /^cmd package set-home-activity '(.+)'$/.exec(part))) { if (!process.env.FAKE_ADB_LAUNCHER_REFUSE) st.default = m[1]; out('Success') }
+    else if ((m = /^dumpsys deviceidle whitelist \+(\S+)$/.exec(part))) { if (!st.idle.includes(m[1])) st.idle.push(m[1]); out('Added: ' + m[1]) }
+    else if ((m = /^dumpsys deviceidle whitelist -(\S+)$/.exec(part))) { st.idle = st.idle.filter((x) => x !== m[1]); out('Removed: ' + m[1]) }
+  }
+  if (file) fs.writeFileSync(file, JSON.stringify(st))
 } else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^echo '@@mem'/.test(args[3])) {
   out('@@mem\nMemTotal:        1950340 kB\n@@disk\nFilesystem     1K-blocks    Used Available Use% Mounted on\n/dev/block/dm-12  8000000 6000000 2000000  75% /data\n@@up\n275400.12 900000.00\n@@abi\narm64-v8a\n@@chip\nmt8696\nmt8696\n@@patch\n2022-05-05')
 } else if (args[0] === '-s' && args[2] === 'reboot') {

@@ -28,6 +28,7 @@ import type {
   FindTvsResult,
   ApplyTweakResult,
   AppSettings,
+  LauncherResult,
   OptimiseState,
   HardwareResult,
   RestartMode,
@@ -590,10 +591,48 @@ export function registerIpc(): void {
 
   ipcMain.handle('cleanup:optimise-status', (): OptimiseState => optimise)
 
+  ipcMain.handle('apps:open', async (_event, packageName: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.openApp(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
+
+  ipcMain.handle('apps:force-stop', async (_event, packageName: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.forceStopApp(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
+
   ipcMain.handle('cleanup:app-cache', async (_event, packageName: unknown): Promise<ActionResult> => {
     const s = session()
     if (!('client' in s)) return s
     return s.client.clearAppCache(s.serial, typeof packageName === 'string' ? packageName : '')
+  })
+
+  // ---- Launcher helper ----
+
+  ipcMain.handle('launcher:status', async (): Promise<LauncherResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    return s.client.launcherStatus(s.serial)
+  })
+
+  ipcMain.handle('launcher:set-default', async (_event, component: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.setDefaultLauncher(s.serial, typeof component === 'string' ? component : '')
+  })
+
+  ipcMain.handle('launcher:keep-alive', async (_event, packageName: unknown, on: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.setLauncherKeepAlive(s.serial, typeof packageName === 'string' ? packageName : '', on === true)
+  })
+
+  ipcMain.handle('launcher:stock-enabled', async (_event, packageName: unknown, enabled: unknown): Promise<ActionResult> => {
+    const s = session()
+    if (!('client' in s)) return s
+    return s.client.setStockLauncherEnabled(s.serial, typeof packageName === 'string' ? packageName : '', enabled === true)
   })
 
   // ---- Backup and restore ----

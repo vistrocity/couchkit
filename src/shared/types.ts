@@ -232,6 +232,8 @@ export interface AppSettings {
   activityLog: boolean
 }
 
+export type LauncherResult = { ok: true; status: import('./launcher').LauncherStatus } | { ok: false; message: string; fix: string; detail: string }
+
 /** The state of the long "optimise apps" job. */
 export interface OptimiseState {
   running: boolean
@@ -330,6 +332,10 @@ export interface CouchkitApi {
   /** Starts (or reports) the long optimise job; reset=true undoes it. */
   optimiseApps(reset: boolean): Promise<OptimiseState>
   optimiseStatus(): Promise<OptimiseState>
+  launcherStatus(): Promise<LauncherResult>
+  setDefaultLauncher(component: string): Promise<ActionResult>
+  setLauncherKeepAlive(packageName: string, on: boolean): Promise<ActionResult>
+  setStockLauncherEnabled(packageName: string, enabled: boolean): Promise<ActionResult>
   readHardware(): Promise<HardwareResult>
   getSettings(): Promise<AppSettings>
   setActivityLog(enabled: boolean): Promise<AppSettings>
@@ -342,6 +348,8 @@ export interface CouchkitApi {
   closeBackgroundApps(): Promise<ActionResult>
   clearAppData(packageName: string): Promise<ActionResult>
   clearAppCache(packageName: string): Promise<ActionResult>
+  openApp(packageName: string): Promise<ActionResult>
+  forceStopApp(packageName: string): Promise<ActionResult>
 
   /** Saves the chosen apps (their .apk files, not their data) to a new folder on this computer. */
   backupApps(packageNames: string[]): Promise<BackupRunResult>

@@ -183,6 +183,45 @@ export const TWEAKS: readonly Tweak[] = [
     detect: (v) => (num(v['on']) === 0 ? 'off' : num(v['on']) === 1 ? 'on' : null)
   },
   {
+    id: 'cec',
+    group: 'System',
+    card: 'HDMI-CEC',
+    title: 'HDMI-CEC',
+    help: 'Lets devices on the HDMI ports (a console, soundbar or player) control the TV and each other with one remote. If never set, the TV uses its own default, which is usually On.',
+    reads: { on: 'settings get global hdmi_control_enabled' },
+    choices: [
+      { id: 'on', label: 'On', commands: ['settings put global hdmi_control_enabled 1'] },
+      { id: 'off', label: 'Off', commands: ['settings put global hdmi_control_enabled 0'] }
+    ],
+    detect: (v) => (num(v['on']) === 0 ? 'off' : 'on')
+  },
+  {
+    id: 'cecwake',
+    group: 'System',
+    card: 'HDMI-CEC',
+    title: 'Turn the TV on when a device starts',
+    help: 'When you switch on a console or player, the TV wakes up and switches to it by itself.',
+    reads: { on: 'settings get global hdmi_control_auto_wakeup_enabled' },
+    choices: [
+      { id: 'on', label: 'On', commands: ['settings put global hdmi_control_auto_wakeup_enabled 1'] },
+      { id: 'off', label: 'Off', commands: ['settings put global hdmi_control_auto_wakeup_enabled 0'] }
+    ],
+    detect: (v) => (num(v['on']) === 0 ? 'off' : 'on')
+  },
+  {
+    id: 'cecoff',
+    group: 'System',
+    card: 'HDMI-CEC',
+    title: 'Turn devices off when the TV turns off',
+    help: 'Switching the TV off also switches off the devices connected by HDMI.',
+    reads: { on: 'settings get global hdmi_control_auto_device_off_enabled' },
+    choices: [
+      { id: 'on', label: 'On', commands: ['settings put global hdmi_control_auto_device_off_enabled 1'] },
+      { id: 'off', label: 'Off', commands: ['settings put global hdmi_control_auto_device_off_enabled 0'] }
+    ],
+    detect: (v) => (num(v['on']) === 0 ? 'off' : 'on')
+  },
+  {
     id: 'devoptions',
     group: 'System',
     title: 'Developer options menu',

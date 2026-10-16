@@ -143,4 +143,10 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 111. Restart page: "Restart into recovery" and "Restart into bootloader" now take three steps: press the button, read the warning and tick "I understand, and I have the TV remote in my hand" (Continue stays greyed until you tick), then a "Last check" with "Yes, restart into ..." or "No, go back". Cancel or No returns to the start without touching the TV.
 112. Tune-ups > Speed: "Freeze cached apps" (TV default / On / Off). Restart the TV after changing. It may change nothing on your TV; that is expected.
 113. Cleanup > "Optimise apps": asks Yes/No, then shows "Working…" with minutes so far. You can switch to other pages and come back. When finished it says "Apps were optimised." This can take 5-30+ minutes; keep the TV on. "Put apps back" returns the apps to the TV's own settings.
+114. Launcher page (between Backup and Restart): lists every launcher on the TV with "Came with the TV" or "Installed by you", whether the Home button opens it, and whether it is running right now.
+115. Install your launcher first (Apps page or App ideas), press Refresh, then "Make this the default" on it. Press Home on the TV remote: your launcher opens. (If the TV ignores it, a plain message says so.)
+116. "Keep it running: On" on your launcher. Then use the TV normally for a while and press Home again: it should still be your launcher. Refresh shows "running now" or "not running now" so we can see whether it was closed.
+117. "Turn off the stock launcher" is greyed until your own launcher is the default. After Yes, press Home: your launcher opens. If anything is wrong, "Turn back on" (same page) restores it. Check the TV settings screen and input switching still work.
+118. Tune-ups > System > HDMI-CEC block: three On/Off switches (HDMI-CEC, turn TV on when a device starts, turn devices off with the TV). Try turning the TV on with a console, with the switch On and Off.
+119. Apps page: "Open" launches the app on the TV; "Force stop" stops it. Force stop on a core system app (for example com.android.systemui in the all-apps list) is refused.
 
