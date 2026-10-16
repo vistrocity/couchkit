@@ -2,7 +2,7 @@
 export const ABOUT = {
   name: 'Couchkit',
   tagline: 'A friendly toolbox for your Google TV or Android TV.',
-  creator: 'Amulu',
+  creator: 'Steve Rozario',
   licence: 'Apache License 2.0'
 } as const
 

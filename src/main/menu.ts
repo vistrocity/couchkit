@@ -3,43 +3,32 @@ import { ABOUT_LINKS } from '@shared/about'
 import { platform } from './platform'
 
 /**
- * Application menu, kept short on purpose. Developer items (Reload, Developer Tools) appear
- * only when running from source, never in the installed app. macOS gets the system menu bar
+ * Application menu, kept short on purpose. On Windows: File, View, Help. Developer items appear
+ * only if the app is run from source with COUCHKIT_DEV=1. macOS gets the system menu bar
  * with the standard app menu; Windows gets an in-window menu.
  */
 export function buildMenu(): Menu {
   const template: MenuItemConstructorOptions[] = []
 
+  const dev = !app.isPackaged && process.env['COUCHKIT_DEV'] === '1'
+  const view: MenuItemConstructorOptions[] = [{ role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }]
+  if (dev) view.push({ type: 'separator' }, { role: 'reload' }, { role: 'toggleDevTools' })
+
+  const help: MenuItemConstructorOptions = {
+    role: 'help',
+    submenu: ABOUT_LINKS.filter((l) => l.id === 'github' || l.id === 'issues').map((l) => ({
+      label: l.label,
+      click: (): void => void shell.openExternal(l.url)
+    }))
+  }
+
   if (platform.isMac) {
-    template.push({ role: 'appMenu' })
+    // macOS needs its Edit menu for copy and paste to work in text boxes.
+    template.push({ role: 'appMenu' }, { role: 'editMenu' })
   } else {
     template.push({ label: 'File', submenu: [{ role: 'quit' }] })
   }
-
-  const view: MenuItemConstructorOptions[] = [
-    { role: 'resetZoom' },
-    { role: 'zoomIn' },
-    { role: 'zoomOut' },
-    { type: 'separator' },
-    { role: 'togglefullscreen' }
-  ]
-  if (!app.isPackaged) {
-    view.push({ type: 'separator' }, { role: 'reload' }, { role: 'toggleDevTools' })
-  }
-
-  const helpLinks = ABOUT_LINKS.filter((l) => l.id === 'github' || l.id === 'issues')
-
-  template.push(
-    {
-      label: 'Edit',
-      submenu: [{ role: 'undo' }, { role: 'redo' }, { type: 'separator' }, { role: 'cut' }, { role: 'copy' }, { role: 'paste' }, { role: 'selectAll' }]
-    },
-    { label: 'View', submenu: view },
-    {
-      role: 'help',
-      submenu: helpLinks.map((l) => ({ label: l.label, click: (): void => void shell.openExternal(l.url) }))
-    }
-  )
+  template.push({ label: 'View', submenu: view }, help)
 
   return Menu.buildFromTemplate(template)
 }

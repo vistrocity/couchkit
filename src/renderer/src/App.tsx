@@ -14,27 +14,30 @@ import { Backup } from './screens/Backup'
 import { Restart } from './screens/Restart'
 import { Launcher } from './screens/Launcher'
 import { Ideas } from './screens/Ideas'
+import { Icon } from './components/Icon'
 import { Appearance } from './screens/Appearance'
 import { DEFAULT_ACCENT, DEFAULT_THEME, type ThemeId } from '@shared/appearance'
 
-/** Sidebar sections. Home, Connect, Remote, Apps, Files, Capture, Tune-ups, Cleanup, Backup, Launcher, Restart, App ideas, Console and Activity work; the others come in later updates. */
+/** Sidebar sections, in groups. */
 const SECTIONS = [
-  { id: 'home', label: 'Home' },
-  { id: 'connect', label: 'Connect' },
-  { id: 'remote', label: 'Remote' },
-  { id: 'apps', label: 'Apps' },
-  { id: 'files', label: 'Files' },
-  { id: 'capture', label: 'Capture' },
-  { id: 'tune', label: 'Tune-ups' },
-  { id: 'cleanup', label: 'Cleanup' },
-  { id: 'backup', label: 'Backup' },
-  { id: 'launcher', label: 'Launcher' },
-  { id: 'restart', label: 'Restart' },
-  { id: 'ideas', label: 'App ideas' },
-  { id: 'console', label: 'Console' },
-  { id: 'log', label: 'Activity' },
-  { id: 'look', label: 'Appearance' }
+  { id: 'home', label: 'Home', icon: 'home', group: 'Start' },
+  { id: 'connect', label: 'Connect', icon: 'plug', group: 'Start' },
+  { id: 'remote', label: 'Remote', icon: 'remote', group: 'Use your TV' },
+  { id: 'apps', label: 'Apps', icon: 'grid', group: 'Use your TV' },
+  { id: 'files', label: 'Files', icon: 'folder', group: 'Use your TV' },
+  { id: 'capture', label: 'Capture', icon: 'camera', group: 'Use your TV' },
+  { id: 'tune', label: 'Tune-ups', icon: 'sliders', group: 'Look after it' },
+  { id: 'cleanup', label: 'Cleanup', icon: 'sparkle', group: 'Look after it' },
+  { id: 'backup', label: 'Backup', icon: 'archive', group: 'Look after it' },
+  { id: 'launcher', label: 'Launcher', icon: 'layout', group: 'Look after it' },
+  { id: 'restart', label: 'Restart', icon: 'power', group: 'Look after it' },
+  { id: 'ideas', label: 'App ideas', icon: 'bulb', group: 'More' },
+  { id: 'console', label: 'Console', icon: 'terminal', group: 'More' },
+  { id: 'log', label: 'Activity', icon: 'list', group: 'More' },
+  { id: 'look', label: 'Appearance', icon: 'palette', group: 'More' }
 ] as const
+
+const GROUPS = ['Start', 'Use your TV', 'Look after it', 'More'] as const
 
 type SectionId = (typeof SECTIONS)[number]['id']
 
@@ -113,21 +116,30 @@ export function App(): JSX.Element {
   return (
     <div className="layout">
       <nav className="sidebar" aria-label="Sections">
-        <h1 className="brand">Couchkit</h1>
-        <ul>
-          {SECTIONS.map((s) => (
-            <li key={s.id}>
-              <button
-                type="button"
-                className={s.id === section ? 'nav active' : 'nav'}
-                aria-current={s.id === section ? 'page' : undefined}
-                onClick={() => setSection(s.id)}
-              >
-                {s.label}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <h1 className="brand">
+          <span className="logo" aria-hidden="true">C</span>
+          Couchkit
+        </h1>
+        {GROUPS.map((group) => (
+          <div key={group}>
+            <p className="nav-group">{group}</p>
+            <ul>
+              {SECTIONS.filter((s) => s.group === group).map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    className={s.id === section ? 'nav active' : 'nav'}
+                    aria-current={s.id === section ? 'page' : undefined}
+                    onClick={() => setSection(s.id)}
+                  >
+                    <Icon name={s.icon} size={17} />
+                    {s.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <div className="main">
@@ -177,12 +189,6 @@ export function App(): JSX.Element {
             />}
           {section === 'files' && <Files connected={connected} onGoToConnect={() => setSection('connect')} />}
           {section === 'log' && <Activity />}
-          {!['home', 'connect', 'remote', 'apps', 'files', 'capture', 'tune', 'cleanup', 'backup', 'launcher', 'restart', 'ideas', 'console', 'log'].includes(section) && (
-            <>
-              <h2>{SECTIONS.find((s) => s.id === section)?.label}</h2>
-              <p className="muted">This section is not built yet.</p>
-            </>
-          )}
         </main>
       </div>
     </div>
