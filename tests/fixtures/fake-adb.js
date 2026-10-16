@@ -96,6 +96,12 @@ if (args[0] === 'version') {
   else out('Performing Streamed Install\nSuccess')
 } else if (args[0] === '-s' && args[2] === 'uninstall') {
   out('Success')
+} else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^dumpsys activity activities \| grep -E/.test(args[3])) {
+  const fs = require('fs')
+  const file = process.env.FAKE_ADB_LAUNCHER
+  const st = file && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : { default: 'com.google.android.tvlauncher/.MainActivity' }
+  const act = st.active || (st.default || '').split('/')[0]
+  out('  mResumedActivity: ActivityRecord{1a2b3c u0 ' + act + '/.Main t12}\n  topResumedActivity=ActivityRecord{1a2b3c u0 ' + act + '/.Main t12}')
 } else if (args[0] === '-s' && args[2] === 'shell' && args.length === 4 && /^(echo '@@lh-|echo @@lh-pid)/.test(args[3])) {
   // Launcher emulator (state in FAKE_ADB_LAUNCHER: {default, disabled[], idle[], stopped[]}).
   const fs = require('fs')
@@ -108,7 +114,7 @@ if (args[0] === 'version') {
     let m
     if ((m = /^echo '(.*)'$/.exec(part))) lines.push(m[1])
     else if ((m = /^echo @@lh-pid (\S+) \$\(pidof \S+\)$/.exec(part))) lines.push('@@lh-pid ' + m[1] + ' ' + (st.disabled.includes(m[1]) || st.stopped.includes(m[1]) ? '' : '4321'))
-    else if (part === 'dumpsys activity activities | grep mHomeProcess') { const act = st.active || (st.default || '').split('/')[0]; if (act) lines.push('  mHomeProcess=ProcessRecord{1a2b3c 4321:' + act + '/u0a95}') }
+    else if (part === 'dumpsys activity activities | grep mHomeProcess') { const act = st.noHomeProcess ? '' : (st.active || (st.default || '').split('/')[0]); if (act) lines.push('  mHomeProcess=ProcessRecord{1a2b3c 4321:' + act + '/u0a95}') }
     else if (/^cmd package query-activities/.test(part)) { for (const c of all) if (!st.disabled.includes(c.split('/')[0])) lines.push('priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=false', c) }
     else if (/^cmd package resolve-activity/.test(part)) lines.push('priority=0 preferredOrder=0 match=0x108000 specificIndex=-1 isDefault=true', st.default || 'android/com.android.internal.app.ResolverActivity')
     else if (part === 'dumpsys deviceidle whitelist') { lines.push('system-excidle,com.android.shell,2000'); for (const p of st.idle) lines.push('user,' + p + ',10123') }

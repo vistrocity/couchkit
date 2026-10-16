@@ -28,6 +28,7 @@ import type {
   FindTvsResult,
   ApplyTweakResult,
   AppSettings,
+  HomeTestResult,
   LauncherResult,
   OptimiseState,
   HardwareResult,
@@ -611,10 +612,30 @@ export function registerIpc(): void {
 
   // ---- Launcher helper ----
 
+  /** The launcher that answered the last "Test Home" press, valid for 10 minutes. */
+  let homeTest: { packageName: string; at: number } | null = null
+  const recentHomeTest = (): string | null => (homeTest !== null && Date.now() - homeTest.at < 600_000 ? homeTest.packageName : null)
+
   ipcMain.handle('launcher:status', async (): Promise<LauncherResult> => {
     const s = session()
     if (!('client' in s)) return { ok: false, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
-    return s.client.launcherStatus(s.serial)
+    const r = await s.client.launcherStatus(s.serial)
+    const hint = recentHomeTest()
+    if (r.ok && r.status.activeHomePackage === null && hint !== null && r.status.launchers.some((l) => l.packageName === hint)) {
+      return {
+        ok: true,
+        status: { ...r.status, activeHomePackage: hint, launchers: r.status.launchers.map((l) => ({ ...l, isActive: l.packageName === hint })) }
+      }
+    }
+    return r
+  })
+
+  ipcMain.handle('launcher:test-home', async (): Promise<HomeTestResult> => {
+    const s = session()
+    if (!('client' in s)) return { ok: false, message: s.ok ? '' : s.message, fix: s.ok ? '' : s.fix, detail: '' }
+    const r = await s.client.testHome(s.serial)
+    if (r.ok && r.packageName !== null) homeTest = { packageName: r.packageName, at: Date.now() }
+    return r
   })
 
   ipcMain.handle('launcher:set-default', async (_event, component: unknown): Promise<ActionResult> => {
@@ -632,7 +653,7 @@ export function registerIpc(): void {
   ipcMain.handle('launcher:stock-enabled', async (_event, packageName: unknown, enabled: unknown): Promise<ActionResult> => {
     const s = session()
     if (!('client' in s)) return s
-    return s.client.setStockLauncherEnabled(s.serial, typeof packageName === 'string' ? packageName : '', enabled === true)
+    return s.client.setStockLauncherEnabled(s.serial, typeof packageName === 'string' ? packageName : '', enabled === true, recentHomeTest())
   })
 
   // ---- Backup and restore ----

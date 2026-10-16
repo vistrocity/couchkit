@@ -150,3 +150,11 @@ export const keepAliveCommands = (pkg: string, on: boolean): string[] =>
     : [`dumpsys deviceidle whitelist -${pkg}`, `cmd appops set ${pkg} RUN_IN_BACKGROUND default`, `cmd appops set ${pkg} RUN_ANY_IN_BACKGROUND default`]
 
 export const setDefaultCommand = (component: string): string => `cmd package set-home-activity '${component}'`
+
+/** What is on screen right now. Used after pressing Home to see which launcher answered. */
+export const FOREGROUND_COMMAND = 'dumpsys activity activities | grep -E "ResumedActivity|topResumedActivity"'
+
+/** Reads the app on screen from lines like "mResumedActivity: ActivityRecord{1a2 u0 com.pkg/.Main t12}". */
+export function parseForeground(output: string): string | null {
+  return /\bu\d+\s+([A-Za-z][\w.]*)\//.exec(output)?.[1] ?? null
+}

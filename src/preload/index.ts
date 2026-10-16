@@ -74,6 +74,7 @@ const api: CouchkitApi = {
   optimiseApps: (reset) => ipcRenderer.invoke('cleanup:optimise', reset),
   optimiseStatus: () => ipcRenderer.invoke('cleanup:optimise-status'),
   launcherStatus: () => ipcRenderer.invoke('launcher:status'),
+  testHome: () => ipcRenderer.invoke('launcher:test-home'),
   setDefaultLauncher: (component) => ipcRenderer.invoke('launcher:set-default', component),
   setLauncherKeepAlive: (packageName, on) => ipcRenderer.invoke('launcher:keep-alive', packageName, on),
   setStockLauncherEnabled: (packageName, enabled) => ipcRenderer.invoke('launcher:stock-enabled', packageName, enabled),

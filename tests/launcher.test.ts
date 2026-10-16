@@ -147,8 +147,26 @@ describe('real-TV behaviours', () => {
     expect(r.status.launchers.find((l) => l.isActive)?.packageName).toBe('com.spocky.projengmenu')
     expect(r.status.launchers.find((l) => l.isDefault)?.packageName).toBe('com.google.android.tvlauncher')
   })
+  it('finds out which launcher answers Home by pressing it', async () => {
+    const { client } = setup({ default: STOCK, active: 'com.spocky.projengmenu', disabled: [], idle: [], stopped: [] })
+    const r = await client.testHome(serial)
+    expect(r.ok && r.packageName).toBe('com.spocky.projengmenu')
+  })
+  it('allows turning off the stock launcher when the Home test names another launcher', async () => {
+    const { client } = setup({ default: STOCK, noHomeProcess: true, disabled: [], idle: [], stopped: [] })
+    // The TV gave no running-home line, so the guard needs the hint from a recent Home test.
+    expect((await client.setStockLauncherEnabled(serial, 'com.google.android.tvlauncher', false, 'com.spocky.projengmenu')).ok).toBe(true)
+  })
   it('allows turning off the stock launcher when another already runs Home', async () => {
     const { client } = setup({ default: STOCK, active: 'com.spocky.projengmenu', disabled: [], idle: [], stopped: [] })
     expect((await client.setStockLauncherEnabled(serial, 'com.google.android.tvlauncher', false)).ok).toBe(true)
+  })
+})
+
+import { parseForeground } from '../src/shared/launcher'
+describe('foreground parsing', () => {
+  it('reads the package of the app on screen', () => {
+    expect(parseForeground('  mResumedActivity: ActivityRecord{1a2b3c u0 ca.dstudio.atvlauncher.pro/.ui.Main t12}')).toBe('ca.dstudio.atvlauncher.pro')
+    expect(parseForeground('')).toBeNull()
   })
 })

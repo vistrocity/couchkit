@@ -151,4 +151,6 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 119. Apps page: "Open" launches the app on the TV; "Force stop" stops it. Force stop on a core system app (for example com.android.systemui in the all-apps list) is refused.
 120. Launcher page: "com.android.tv.settings" and setup screens are no longer listed as launchers.
 121. If your TV shows one launcher when you press Home but Android's list names another default, a note says so. The card of the launcher actually in charge says "Home button shows this now". Check this matches what you see on the TV.
+122. Launcher page: "Test: press Home on the TV" presses Home on the TV and says which app opened (for example ca.dstudio.atvlauncher.pro). That launcher's card then says "Home button shows this now".
+123. After a successful Home test (valid for 10 minutes), "Turn off the stock launcher" unlocks if your own launcher answered Home. Without a test, it stays greyed on TVs that do not report the running launcher.
 

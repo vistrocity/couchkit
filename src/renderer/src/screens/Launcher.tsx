@@ -13,6 +13,7 @@ export function Launcher({ connected, onGoToConnect }: Props): JSX.Element {
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
   const [confirmOff, setConfirmOff] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<string>('')
 
   const refresh = useCallback(async (): Promise<void> => {
     const r = await window.couchkit.launcherStatus()
@@ -94,7 +95,29 @@ export function Launcher({ connected, onGoToConnect }: Props): JSX.Element {
         <button type="button" disabled={busy} onClick={() => void refresh()}>
           Refresh
         </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() =>
+            void (async () => {
+              setBusy(true)
+              setTestResult('')
+              const r = await window.couchkit.testHome()
+              if (r.ok) {
+                setTestResult(r.packageName === null ? 'Home was pressed, but the TV did not say which app opened.' : `Home was pressed. This opened: ${r.packageName}`)
+                setError(null)
+              } else {
+                setError({ message: r.message, fix: r.fix, detail: r.detail })
+              }
+              await refresh()
+              setBusy(false)
+            })()
+          }
+        >
+          Test: press Home on the TV
+        </button>
       </div>
+      {testResult !== '' && <p className="muted">{testResult}</p>}
 
       {status === null && error === null && <p className="muted">Reading…</p>}
 
@@ -122,13 +145,13 @@ export function Launcher({ connected, onGoToConnect }: Props): JSX.Element {
                 <strong>{l.packageName}</strong>{' '}
                 <span className="muted small">
                   {l.system ? 'Came with the TV' : 'Installed by you'}
-                  {l.isActive ? ' · Home button shows this now' : l.isDefault && status.activeHomePackage === null ? ' · Home button opens this' : l.isDefault ? ' · Android\'s default' : ''}
+                  {l.isActive ? ' · Home button shows this now' : l.isDefault && status.activeHomePackage === null ? ' · Android\'s default (press "Test" to see what really opens)' : l.isDefault ? ' · Android\'s default' : ''}
                   {l.running ? ' · running now' : ' · not running now'}
                 </span>
               </p>
               <div className="row">
                 <button type="button" className={l.isDefault || l.isActive ? 'primary' : ''} disabled={busy || l.isDefault || l.isActive} onClick={() => void run(() => window.couchkit.setDefaultLauncher(l.component))}>
-                  {l.isActive ? 'In charge of Home' : l.isDefault ? (status.activeHomePackage === null ? 'This is the default' : 'Android\'s default') : 'Make this the default'}
+                  {l.isActive ? 'In charge of Home' : l.isDefault ? 'Android\'s default' : 'Make this the default'}
                 </button>
                 <button
                   type="button"

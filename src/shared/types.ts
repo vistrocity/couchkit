@@ -234,6 +234,8 @@ export interface AppSettings {
 
 export type LauncherResult = { ok: true; status: import('./launcher').LauncherStatus } | { ok: false; message: string; fix: string; detail: string }
 
+export type HomeTestResult = { ok: true; packageName: string | null; detail: string } | { ok: false; message: string; fix: string; detail: string }
+
 /** The state of the long "optimise apps" job. */
 export interface OptimiseState {
   running: boolean
@@ -333,6 +335,8 @@ export interface CouchkitApi {
   optimiseApps(reset: boolean): Promise<OptimiseState>
   optimiseStatus(): Promise<OptimiseState>
   launcherStatus(): Promise<LauncherResult>
+  /** Presses Home on the TV and says which app came to the front. */
+  testHome(): Promise<HomeTestResult>
   setDefaultLauncher(component: string): Promise<ActionResult>
   setLauncherKeepAlive(packageName: string, on: boolean): Promise<ActionResult>
   setStockLauncherEnabled(packageName: string, enabled: boolean): Promise<ActionResult>

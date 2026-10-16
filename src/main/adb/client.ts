@@ -18,7 +18,9 @@ import {
   keepAliveCommands,
   packageOf,
   parseComponents,
+  FOREGROUND_COMMAND,
   isNotALauncher,
+  parseForeground,
   parseActiveHome,
   parseDefaultLauncher,
   parsePackageNames,
@@ -629,6 +631,18 @@ export class AdbClient {
     )
   }
 
+  /** Presses Home on the TV and reports which app came to the front (the launcher that really answers Home). */
+  async testHome(serial: string): Promise<{ ok: true; packageName: string | null; detail: string } | { ok: false; message: string; fix: string; detail: string }> {
+    const press = await this.shell(serial, ['input', 'keyevent', 'KEYCODE_HOME'], 15_000)
+    if (!press.ok) {
+      const { message, fix } = explainFailure(press.category ?? 'other')
+      return { ok: false, message, fix, detail: (press.stderr || press.stdout).trim() }
+    }
+    await this.sleep(1500)
+    const shown = await this.shell(serial, [FOREGROUND_COMMAND], 30_000)
+    return { ok: true, packageName: parseForeground(shown.stdout), detail: shown.stdout.trim().slice(0, 500) }
+  }
+
   /** Turns "keep alive" (no battery saving) on or off for a launcher. */
   async setLauncherKeepAlive(serial: string, packageName: string, on: boolean): Promise<ActionResult> {
     const status = await this.launcherStatus(serial)
@@ -644,13 +658,13 @@ export class AdbClient {
    * Turning off is refused unless a different launcher is installed, on and already the default,
    * so the TV can never be left without a home screen by this button.
    */
-  async setStockLauncherEnabled(serial: string, packageName: string, enabled: boolean): Promise<ActionResult> {
+  async setStockLauncherEnabled(serial: string, packageName: string, enabled: boolean, activeHint: string | null = null): Promise<ActionResult> {
     if (!STOCK_LAUNCHER_PACKAGES.includes(packageName)) return actionFail('other', 'That is not a stock launcher.', '', packageName.slice(0, 100))
     if (!enabled) {
       const status = await this.launcherStatus(serial)
       if (!status.ok) return actionFail('other', status.message, status.fix, status.detail)
       const def = status.status.defaultComponent
-      const active = status.status.activeHomePackage
+      const active = status.status.activeHomePackage ?? activeHint
       const others = status.status.launchers.filter((l) => l.packageName !== packageName)
       // Another launcher must already be in charge: either Android's default, or the one running the home screen.
       const otherInCharge = (def !== null && packageOf(def) !== packageName) || (active !== null && active !== packageName)
