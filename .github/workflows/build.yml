@@ -82,8 +82,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -la installers
-          gh release create "${{ github.ref_name }}" installers/* \
-            --repo "${{ github.repository }}" \
-            --title "Couchkit ${{ github.ref_name }}" \
-            --prerelease \
-            --notes "First test release. Installers are not code-signed yet: on Mac use right-click, Open (or System Settings, Privacy and Security, Open Anyway); on Windows press More info, then Run anyway. Download adb separately from inside the app. See the README."
+          # If you already made the release by hand on GitHub, just attach the files to it.
+          if gh release view "${{ github.ref_name }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release upload "${{ github.ref_name }}" installers/* --clobber --repo "${{ github.repository }}"
+          else
+            gh release create "${{ github.ref_name }}" installers/* \
+              --repo "${{ github.repository }}" \
+              --title "Couchkit ${{ github.ref_name }}" \
+              --prerelease \
+              --notes "First test release. Installers are not code-signed yet: on Mac use right-click, Open (or System Settings, Privacy and Security, Open Anyway); on Windows press More info, then Run anyway. Download adb separately from inside the app. See the README."
+          fi
