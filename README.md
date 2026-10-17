@@ -1,70 +1,53 @@
 # Couchkit
 
-A desktop toolbox for **Google TV** and **Android TV** devices, for macOS and Windows.
-It talks to your TV over Wi-Fi using Google's `adb` and gives you plain buttons instead of commands.
+A friendly toolbox for your **Google TV** or **Android TV**, for Mac and Windows.
+Connect over Wi-Fi and use plain buttons instead of commands: a remote, app manager, file browser, screenshots, tune-ups, cleanup, backup and more.
 
-> **Status: early development (v0.1, twelfth slice).** The app can download `adb`, connect to your TV by address,
-> remember the TVs you used, show their details, and can optionally keep a list of the commands it runs (Activity page, off by default).
-> It also has an on-screen remote (with keyboard keys and typing) and an app manager (install .apk files, uninstall,
-> disable/enable) and a file browser (upload, download, new folder, delete). It can take screenshots and record the TV screen (saved in your Pictures and Videos folders, in a Couchkit folder). A console runs commands on the TV, with ready-made and saved shortcuts. "Find my TV" looks for TVs on your Wi-Fi. Tune-ups change common settings (animation speed, text size, screen density, DNS and more), with automatic undo for risky ones. Cleanup frees storage and memory and can clear one app's cache or data. Backup saves your installed apps to this computer and restores them. Restart restarts the TV, App ideas links to free open-source apps, and Launcher helps a home-screen app you installed stay the default. The extra tools arrive in the next slices.
+## Download
 
-Couchkit is an independent project. It is not affiliated with or endorsed by Google.
-"Android" and "Google TV" are trademarks of Google LLC.
+Get the latest version from the **[Releases page](../../releases/latest)**.
+
+| Your computer | Download |
+| --- | --- |
+| Mac with Apple chip (M1, M2, M3, M4...) | `Couchkit-…-arm64.dmg` |
+| Mac with Intel chip | `Couchkit-….dmg` (the one without "arm64") |
+| Windows | `Couchkit.Setup.….exe` |
+
+Not sure which Mac you have? Apple menu > **About This Mac**.
+
+**First open:** Couchkit isn't code-signed yet, so your computer will ask you to confirm.
+- **Mac:** drag Couchkit to Applications and try to open it once. Then open **System Settings > Privacy & Security**, scroll down and press **Open Anyway**.
+- **Windows:** if SmartScreen warns about an unknown publisher, press **More info**, then **Run anyway**.
+
+## Set up your TV
+
+1. On the TV open **Settings > System > About** and tap **Build** seven times.
+2. Open **Settings > System > Developer options** and turn on **USB debugging** (and **Wireless debugging** if you see it).
+3. Keep the TV and your computer on the same Wi-Fi.
+4. Open Couchkit. It offers to download Google's `adb` tool for you the first time.
+
+## Privacy
+
+No accounts, no tracking, nothing leaves your computer. Couchkit only downloads Google's adb when you ask it to.
 
 ## Created by Steve Rozario
 
-Couchkit is free and open source under the [Apache License 2.0](LICENSE). Copyright 2026 Steve Rozario.
-If you share or modify it, you must keep the copyright notice and the [NOTICE](NOTICE) file.
-The Couchkit name and logo are not part of the licence ([TRADEMARKS.md](TRADEMARKS.md)): please give your own version its own name.
+Free and open source under the [Apache License 2.0](LICENSE). Copyright 2026 Steve Rozario.
+If you share or modify it, keep the copyright notice and the [NOTICE](NOTICE) file. The Couchkit name and logo are not part of the licence ([TRADEMARKS.md](TRADEMARKS.md)).
 
-If Couchkit saved you time, you can support it here:
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-ffdd00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/vistrocity)
-Supporting is entirely optional; the app is complete and free either way.
+Built with Claude as my AI sidekick. If Couchkit saved you time, you can [buy me a coffee](https://buymeacoffee.com/vistrocity). It's optional; the app is free either way.
 
-## Get the app (no coding needed)
+Couchkit is an independent project, not affiliated with or endorsed by Google. "Android" and "Google TV" are trademarks of Google LLC. `adb` is a separate Google program with its own licence and is not included.
 
-1. Open the **Releases** page of this repository and download the installer for your system. (Before the first release, open the **Actions** tab, press **Run workflow** on **Build**, then pick that run.)
-2. Under **Artifacts**, download `couchkit-macOS` or `couchkit-Windows` and unzip it.
-3. Install:
-   - **macOS:** open the `.dmg` and drag Couchkit to Applications. The app is not signed yet, so macOS blocks the
-     first open. Try to open it once, then go to **System Settings > Privacy & Security**, scroll down and press
-     **Open Anyway**. (Or run `xattr -cr /Applications/Couchkit.app` in Terminal once.)
-   - **Windows:** run the `.exe` installer. Windows SmartScreen may warn about an unknown publisher:
-     choose **More info**, then **Run anyway**.
+## For developers
 
-## Run it from the source (to develop)
-
-You need [Node.js](https://nodejs.org) 22 or newer.
+Needs [Node.js](https://nodejs.org) 22 or newer.
 
 ```bash
 npm install
-npm run dev        # opens the app with live reload
-npm test           # unit tests
-npm run typecheck
-npm run dist       # builds an installer for the system you are on
+npm run dev    # run the app
+npm test
+npm run dist   # build an installer for your system
 ```
 
-## Prepare your TV
-
-1. On the TV open **Settings > System > About** and tap **Build** seven times to become a developer.
-2. Open **Settings > System > Developer options** and turn on **USB debugging** (and **Wireless debugging** if offered).
-3. Keep the TV and your computer on the same Wi-Fi network.
-
-## How it is built
-
-- Electron + TypeScript + React.
-- One module (`src/main/adb/runner.ts`) starts every external program, with an argument list (never a shell string),
-  a timeout, and a log entry. Text you type can never become a command.
-- One module (`src/main/platform/`) knows which operating system it is, so the rest of the code does not.
-
-## Signing
-
-Builds are unsigned. For public releases:
-- **macOS:** an Apple Developer ID certificate and notarization (`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
-  `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` as repository secrets, then enable notarization in `electron-builder.yml`).
-- **Windows:** a code signing certificate (`CSC_LINK`, `CSC_KEY_PASSWORD`).
-
-## License
-
-Apache-2.0. See `LICENSE` and `NOTICE`. `adb` and `scrcpy` are separate programs with their own licenses and are
-downloaded by the user, not included.
+Built with Electron, TypeScript and React. See [CONTRIBUTING.md](CONTRIBUTING.md).
