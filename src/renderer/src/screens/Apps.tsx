@@ -31,6 +31,8 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
   const [activeHome, setActiveHome] = useState<string | null>(null)
   const [risk, setRisk] = useState<{ pkg: string; action: RiskyAction } | null>(null)
   const [riskTick, setRiskTick] = useState(false)
+  // Files that were dragged in and are waiting for the person to say "yes, install".
+  const [pendingDrop, setPendingDrop] = useState<string[] | null>(null)
 
   const refresh = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -133,7 +135,8 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
       })
       return
     }
-    void install(paths)
+    setInstallResults([])
+    setPendingDrop(paths)
   }
 
   const act = async (packageName: string, run: () => Promise<ActionResult>): Promise<void> => {
@@ -185,6 +188,38 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
         )}
       </div>
 
+      {pendingDrop !== null && (
+        <div className="card warn" role="alertdialog" aria-labelledby="drop-title">
+          <p id="drop-title">
+            <strong>
+              Install {pendingDrop.length === 1 ? 'this app' : `these ${pendingDrop.length} apps`} on {connected.model ?? 'your TV'}?
+            </strong>
+          </p>
+          <ul>
+            {pendingDrop.map((path) => (
+              <li key={path}>{path.split(/[\\/]/).pop()}</li>
+            ))}
+          </ul>
+          <p className="muted small">Only install apps from sources you trust.</p>
+          <div className="row">
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                const paths = pendingDrop
+                setPendingDrop(null)
+                void install(paths)
+              }}
+            >
+              Yes, install
+            </button>
+            <button type="button" onClick={() => setPendingDrop(null)}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       {installResults.length > 0 && (
         <ul className="results">
           {installResults.map((r) => (
@@ -221,7 +256,7 @@ export function Apps({ connected, onGoToConnect }: Props): JSX.Element {
           Search apps
         </label>
         <input id="app-search" type="text" className="grow" placeholder="Search by app name…" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <select aria-label="Which apps to show" value={gate ? 'user' : filter} onChange={(e) => chooseFilter(e.target.value as Filter)}>
+        <select aria-label="Which apps to show" value={gate ? 'all' : filter} onChange={(e) => chooseFilter(e.target.value as Filter)}>
           <option value="user">Apps I installed</option>
           <option value="all">All apps (including system)</option>
         </select>

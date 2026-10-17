@@ -175,3 +175,5 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 140. Apps: choosing "All apps (including system)" first shows a red HIGH RISK warning; system apps appear only after "I understand the risk". Cancel/Go back keeps the list on your own apps.
 141. System apps carry a red SYSTEM / HIGH RISK badge. Disable, Uninstall and Clear data on them ask again, naming the app and the consequences, and the red button stays off until the box is ticked.
 142. Core system apps (Settings, System UI, Google services and a few more) and the TV's current home screen cannot be disabled, removed or wiped from here; the buttons are greyed out with a reason.
+143. Apps: choose "All apps", then (while the warning shows) choose "Apps I installed" again - the warning closes and your apps are listed.
+144. Apps: drag an .apk onto the page - a "Install this app on <TV>?" box appears; Cancel installs nothing, "Yes, install" installs.
