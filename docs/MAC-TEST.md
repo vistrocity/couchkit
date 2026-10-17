@@ -8,12 +8,17 @@ Open **Terminal** (press Cmd+Space, type Terminal, press Enter) and run these on
 
 1. `node -v` - if it prints a number starting with 22 or higher, skip to step 3. If it says "command not found", install the **LTS** version from https://nodejs.org, then close and reopen Terminal.
 2. `git --version` - if macOS offers to install "command line developer tools", accept; it takes a few minutes.
-3. `git clone https://github.com/vistrocity/couchkit.git`
-4. `cd couchkit`
-5. `npm install`
-6. `npm run dev`
+3. `mkdir -p ~/Documents/Couchkit` - makes the folder (harmless if it already exists).
+4. `cd ~/Documents/Couchkit`
+5. `git clone https://github.com/vistrocity/couchkit.git .` - note the dot at the end: it puts the files straight into `/Users/steverozario/Documents/Couchkit` instead of creating another folder inside it. If it says the folder is not empty, tell me what is in it (`ls -la`) and I'll adjust.
+6. `npm install`
+7. `npm run dev`
 
 The Couchkit window opens. Leave Terminal open while you test; press Ctrl+C in it to stop.
+
+Next time, to start it again: `cd ~/Documents/Couchkit` then `npm run dev`. To get my latest fixes first, run `git pull` and `npm install` before `npm run dev`.
+
+Note: macOS may ask whether Terminal can access your Documents folder. Press **Allow**.
 
 ## 2. Mac-specific checks
 
@@ -37,7 +42,7 @@ Tick each one and tell me anything that looks wrong.
 
 ## 3. Try the real installer (optional)
 
-`npm run dist` builds an installer in the `dist` folder (a .dmg and a .zip). It is **not signed**, so macOS blocks the first open:
+From `~/Documents/Couchkit`, `npm run dist` builds an installer in its `dist` folder (a .dmg and a .zip). It is **not signed**, so macOS blocks the first open:
 
 - Drag Couchkit to Applications, then **right-click it -> Open -> Open**.
 - If that is not offered (newer macOS): try to open it once, then go to System Settings -> Privacy & Security, scroll down and press **Open Anyway**.
