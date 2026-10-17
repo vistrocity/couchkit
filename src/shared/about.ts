@@ -11,6 +11,8 @@ export interface AboutLink {
   id: string
   label: string
   url: string
+  /** True for links that are opened from a specific place, not listed in the About card or Help menu. */
+  unlisted?: boolean
 }
 
 export const ABOUT_LINKS: readonly AboutLink[] = [
@@ -18,7 +20,8 @@ export const ABOUT_LINKS: readonly AboutLink[] = [
   { id: 'github', label: 'Project page on GitHub', url: 'https://github.com/vistrocity/couchkit' },
   { id: 'issues', label: 'Report a problem or suggest an idea', url: 'https://github.com/vistrocity/couchkit/issues' },
   { id: 'licence', label: 'Read the licence', url: 'https://github.com/vistrocity/couchkit/blob/main/LICENSE' },
-  { id: 'adb', label: 'Get adb (Google platform-tools)', url: 'https://developer.android.com/tools/releases/platform-tools' }
+  { id: 'adb', label: 'Get adb (Google platform-tools)', url: 'https://developer.android.com/tools/releases/platform-tools' },
+  { id: 'sdkterms', label: 'Android SDK licence', url: 'https://developer.android.com/sdk/terms', unlisted: true }
 ]
 
 export function findAboutLink(id: unknown): AboutLink | undefined {

@@ -81,7 +81,7 @@ export function Home({ info, adb, onAdbChanged, onGoToConnect, onGo, connected }
           and "Google TV" are trademarks of Google LLC.
         </p>
         <div className="links">
-          {ABOUT_LINKS.map((l) => (
+          {ABOUT_LINKS.filter((l) => l.unlisted !== true).map((l) => (
             <button type="button" key={l.id} className={l.id === 'support' ? 'primary' : undefined} onClick={() => void window.couchkit.openAboutLink(l.id)}>
               {l.label}
             </button>

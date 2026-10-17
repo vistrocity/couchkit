@@ -41,7 +41,17 @@ export function AdbCard({ adb, onChanged }: Props): JSX.Element {
         <>
           <p className="muted small">
             Couchkit downloads Google&apos;s own Platform-Tools from dl.google.com into its own folder.
-            Nothing is installed on your system.
+            Nothing is installed on your system. By downloading it you accept Google&apos;s{' '}
+            <a
+              href="#sdk-licence"
+              onClick={(e) => {
+                e.preventDefault()
+                void window.couchkit.openAboutLink('sdkterms')
+              }}
+            >
+              Android SDK licence
+            </a>
+            .
           </p>
           <button type="button" className="primary" onClick={() => void download()} disabled={busy}>
             {busy ? 'Downloading…' : 'Download adb'}
