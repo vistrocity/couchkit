@@ -1,24 +1,14 @@
 # Couchkit
 
-A friendly toolbox for your **Google TV** or **Android TV**, for Mac and Windows.
+A friendly toolbox for your **Google TV** or **Android TV**, for Windows (Mac version coming).
 Connect over Wi-Fi and use plain buttons instead of commands: a remote, app manager, file browser, screenshots, tune-ups, cleanup, backup and more.
 
 ## Download
 
-Get the latest version from the **[Releases page](../../releases/latest)**.
+**Windows:** get `Couchkit.Setup.….exe` from the **[Releases page](../../releases/latest)** and run it.
+Couchkit isn't code-signed yet, so if SmartScreen warns about an unknown publisher, press **More info**, then **Run anyway**.
 
-| Your computer | Download |
-| --- | --- |
-| Mac with Apple chip (M1, M2, M3, M4...) | `Couchkit-…-arm64.dmg` |
-| Mac with Intel chip | `Couchkit-….dmg` (the one without "arm64") |
-| Windows | `Couchkit.Setup.….exe` |
-
-Not sure which Mac you have? Apple menu > **About This Mac**.
-
-**First open:** Couchkit isn't code-signed yet, so your computer will ask you to confirm.
-- **Mac:** drag Couchkit to Applications and try to open it once. Then open **System Settings > Privacy & Security**, scroll down and press **Open Anyway**.
-  If it says Couchkit is "damaged", open Terminal and run `xattr -cr /Applications/Couchkit.app`, then open it again.
-- **Windows:** if SmartScreen warns about an unknown publisher, press **More info**, then **Run anyway**.
+**Mac:** an installer isn't ready yet. On recent versions of macOS (Sequoia and Tahoe), an installed app can fail to get the "Local Network" permission it needs to find and talk to your TV. Couchkit works on a Mac when run from source, so for now see "For developers" below. A proper Mac download will come once this is solved.
 
 ## Set up your TV
 
