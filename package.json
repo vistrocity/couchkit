@@ -1,7 +1,7 @@
 {
   "name": "couchkit",
   "productName": "Couchkit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Desktop toolbox for Google TV and Android TV devices, built on adb.",
   "author": "Steve Rozario",
   "license": "Apache-2.0",
