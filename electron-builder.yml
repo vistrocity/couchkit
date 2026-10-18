@@ -9,6 +9,10 @@ files:
   - package.json
 mac:
   icon: build/icon.png
+  # Ad-hoc signature (no Apple account needed). Apple-chip Macs refuse a completely unsigned app as "damaged";
+  # with this, the person only sees the normal "unidentified developer" prompt and can press Open Anyway.
+  identity: '-'
+  hardenedRuntime: false
   extendInfo:
     NSLocalNetworkUsageDescription: Couchkit looks for Android TVs and Google TVs on your home network and talks to them to run the tools you choose.
     NSBonjourServices:

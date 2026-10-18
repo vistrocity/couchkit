@@ -17,6 +17,7 @@ Not sure which Mac you have? Apple menu > **About This Mac**.
 
 **First open:** Couchkit isn't code-signed yet, so your computer will ask you to confirm.
 - **Mac:** drag Couchkit to Applications and try to open it once. Then open **System Settings > Privacy & Security**, scroll down and press **Open Anyway**.
+  If it says Couchkit is "damaged", open Terminal and run `xattr -cr /Applications/Couchkit.app`, then open it again.
 - **Windows:** if SmartScreen warns about an unknown publisher, press **More info**, then **Run anyway**.
 
 ## Set up your TV
