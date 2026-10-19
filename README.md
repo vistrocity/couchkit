@@ -59,7 +59,7 @@
 ## Get started
 
 1. **Download it.** Open the **[Releases page](../../releases/latest)** and download the file for your computer:
-   - **Windows:** `Couchkit.Setup.….exe`. Run it. Couchkit isn't code-signed yet, so Windows may say "unknown publisher": press **More info**, then **Run anyway**.
+   - **Windows:** `Couchkit-Setup-….exe`. Run it. Prefer no install? Get `Couchkit-…-portable.exe` (one file, just double-click) or `Couchkit-…-win.zip` (unzip anywhere, run `Couchkit.exe`). Couchkit isn't code-signed yet, so Windows may say "unknown publisher": press **More info**, then **Run anyway**.
    - **Linux (Debian, Ubuntu, Mint):** `couchkit_….deb`. Double-click it, or run `sudo apt install ./couchkit_*.deb`.
    - **Linux (other):** `Couchkit-….AppImage`. Allow it to run (right-click > Properties > Allow executing, or `chmod +x`), then double-click it. Some newer Ubuntu versions also need `sudo apt install libfuse2`.
 

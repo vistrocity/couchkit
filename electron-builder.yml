@@ -39,9 +39,17 @@ linux:
       arch: [x64]
 win:
   icon: build/icon.ico
+  artifactName: Couchkit-${version}-win.${ext}
   target:
     - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+    - target: zip
       arch: [x64]
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  artifactName: Couchkit-Setup-${version}.${ext}
+portable:
+  artifactName: Couchkit-${version}-portable.${ext}

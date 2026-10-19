@@ -47,7 +47,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: couchkit-Windows
-          path: dist/*.exe
+          path: |
+            dist/*.exe
+            dist/*.zip
           if-no-files-found: error
 
   # Linux packages (AppImage and .deb): built for every release tag (and on demand).
@@ -124,5 +126,5 @@ jobs:
               --repo "${{ github.repository }}" \
               --title "Couchkit ${{ github.ref_name }}" \
               --prerelease \
-              --notes "Windows installer (not code-signed yet: if SmartScreen warns, press More info, then Run anyway) and Linux packages (.AppImage and .deb; Linux is a beta, please report problems). The Mac version is on hold (see the README). adb is downloaded from inside the app."
+              --notes "Windows installer, portable .exe and zip (not code-signed yet: if SmartScreen warns, press More info, then Run anyway) and Linux packages (.AppImage and .deb; Linux is a beta, please report problems). The Mac version is on hold (see the README). adb is downloaded from inside the app."
           fi
