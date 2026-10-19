@@ -26,6 +26,17 @@ mac:
       arch: [x64, arm64]
     - target: zip
       arch: [x64, arm64]
+linux:
+  syncDesktopName: true
+  icon: build/icon.png
+  category: Utility
+  synopsis: A friendly toolbox for Google TV and Android TV
+  maintainer: Steve Rozario <228487241+vistrocity@users.noreply.github.com>
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
 win:
   icon: build/icon.ico
   target:

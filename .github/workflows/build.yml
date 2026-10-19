@@ -1,7 +1,7 @@
 name: Build
 
 # Quick checks run on every push and pull request (about a minute, one machine).
-# The slow installer build for Windows runs only when a release tag
+# The slow installer builds for Windows and Linux run only when a release tag
 # (for example v0.1.0) is pushed, or when you press "Run workflow" by hand.
 on:
   push:
@@ -50,6 +50,30 @@ jobs:
           path: dist/*.exe
           if-no-files-found: error
 
+  # Linux packages (AppImage and .deb): built for every release tag (and on demand).
+  package-linux:
+    name: Installer (Linux)
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Package
+        run: npm run dist
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: couchkit-Linux
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+          if-no-files-found: error
+
   # macOS installer: on demand only ("Run workflow") while the Mac release is on hold.
   # Not attached to releases. See README, "Mac".
   package-mac:
@@ -77,7 +101,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: package-windows
+    needs: [package-windows, package-linux]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -100,5 +124,5 @@ jobs:
               --repo "${{ github.repository }}" \
               --title "Couchkit ${{ github.ref_name }}" \
               --prerelease \
-              --notes "Windows installer. It is not code-signed yet: if SmartScreen warns, press More info, then Run anyway. The Mac version is on hold (see the README). adb is downloaded from inside the app."
+              --notes "Windows installer (not code-signed yet: if SmartScreen warns, press More info, then Run anyway) and Linux packages (.AppImage and .deb). The Mac version is on hold (see the README). adb is downloaded from inside the app."
           fi

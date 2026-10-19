@@ -177,3 +177,4 @@ Turn on **Developer options > USB debugging** (and **Wireless debugging** if off
 142. Core system apps (Settings, System UI, Google services and a few more) and the TV's current home screen cannot be disabled, removed or wiped from here; the buttons are greyed out with a reason.
 143. Apps: choose "All apps", then (while the warning shows) choose "Apps I installed" again - the warning closes and your apps are listed.
 144. Apps: drag an .apk onto the page - a "Install this app on <TV>?" box appears; Cancel installs nothing, "Yes, install" installs.
+145. Linux: install the .deb (or run the .AppImage). Couchkit opens, shows its icon, the menu has File, View and Help, and the Home tip says Ctrl + K. Find my TV, Connect and the Remote work.
