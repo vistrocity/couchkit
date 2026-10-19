@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>⬇ Download for Windows or Linux</b></a> &nbsp;·&nbsp;
+  <a href="../../releases/latest"><b>⬇ Download for Windows or Linux (beta)</b></a> &nbsp;·&nbsp;
   <a href="#get-started">How to get started</a> &nbsp;·&nbsp;
   <a href="#why-couchkit-exists">Why it exists</a>
 </p>
@@ -20,7 +20,7 @@
   <a href="../../releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/vistrocity/couchkit?label=release"></a>
   <a href="LICENSE"><img alt="Licence: Apache 2.0" src="https://img.shields.io/badge/licence-Apache%202.0-blue"></a>
   <img alt="Works on Windows" src="https://img.shields.io/badge/Windows-ready-brightgreen">
-  <img alt="Works on Linux" src="https://img.shields.io/badge/Linux-ready-brightgreen">
+  <img alt="Works on Linux" src="https://img.shields.io/badge/Linux-beta-yellow">
   <img alt="Mac coming" src="https://img.shields.io/badge/Mac-coming%20soon-lightgrey">
 </p>
 
@@ -62,6 +62,8 @@
    - **Windows:** `Couchkit.Setup.….exe`. Run it. Couchkit isn't code-signed yet, so Windows may say "unknown publisher": press **More info**, then **Run anyway**.
    - **Linux (Debian, Ubuntu, Mint):** `couchkit_….deb`. Double-click it, or run `sudo apt install ./couchkit_*.deb`.
    - **Linux (other):** `Couchkit-….AppImage`. Allow it to run (right-click > Properties > Allow executing, or `chmod +x`), then double-click it. Some newer Ubuntu versions also need `sudo apt install libfuse2`.
+
+   The Linux version is a **beta**: it was tested in a simulated setup but not yet on many real Linux desktops. If something doesn't work, please [tell me](../../issues).
 2. **Get your TV ready** (once):
    - On the TV open **Settings > System > About** and tap **Build** seven times.
    - Open **Settings > System > Developer options** and turn on **USB debugging** (and **Wireless debugging** if you see it).
