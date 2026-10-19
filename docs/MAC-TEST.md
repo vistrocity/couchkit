@@ -10,7 +10,7 @@ Open **Terminal** (press Cmd+Space, type Terminal, press Enter) and run these on
 2. `git --version` - if macOS offers to install "command line developer tools", accept; it takes a few minutes.
 3. `mkdir -p ~/Documents/Couchkit` - makes the folder (harmless if it already exists).
 4. `cd ~/Documents/Couchkit`
-5. `git clone https://github.com/vistrocity/couchkit.git .` - note the dot at the end: it puts the files straight into `/Users/steverozario/Documents/Couchkit` instead of creating another folder inside it. If it says the folder is not empty, tell me what is in it (`ls -la`) and I'll adjust.
+5. `git clone https://github.com/vistrocity/couchkit.git .` - note the dot at the end: it puts the files straight into `Documents/Couchkit` instead of creating another folder inside it. If it says the folder is not empty, tell me what is in it (`ls -la`) and I'll adjust.
 6. `npm install`
 7. `npm run dev`
 
@@ -28,7 +28,7 @@ Tick each one and tell me anything that looks wrong.
 2. The Home page tip says **Cmd + K**, and pressing Cmd+K jumps to the Connect page address box.
 3. The Dock shows the dark "Ck" icon.
 4. Home -> adb: if adb is missing, press **Download adb**. Afterwards Home says the file matched Google's checksum.
-5. Connect page -> **Find my TV**. macOS may ask to allow Couchkit to find devices on the local network: press **Allow**. If you pressed Don't Allow, enable it in System Settings -> Privacy & Security -> Local Network. The TV should be listed. Typing the address by hand (for example 192.168.1.190) must also work.
+5. Connect page -> **Find my TV**. macOS may ask to allow Couchkit to find devices on the local network: press **Allow**. If you pressed Don't Allow, enable it in System Settings -> Privacy & Security -> Local Network. The TV should be listed. Typing the address by hand (for example 192.168.1.50) must also work.
 6. Connect to the TV and accept the prompt on the TV (tick "Always allow"). The strip at the top shows the TV details and a "Connected" pop-up appears bottom-right.
 7. Remote: arrow keys, Enter, Esc (Back) control the TV. Type a word in the text box.
 8. Apps: drag a small .apk from **Finder** onto the Apps page; it installs. Also try the **Choose files...** button.
