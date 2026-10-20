@@ -83,7 +83,7 @@ That's it. Everything is explained on screen as you go.
 
 ## Why Couchkit exists
 
-I'm not a programmer. I wanted a simple, friendly tool for my own Android TV and couldn't find one, so I made it with Claude, an AI assistant from Anthropic. I described what I wanted, Claude wrote the code, and I tested it on my own TV again and again until it worked the way an ordinary person would expect. In short, it's a vibe-coded project. My wife, who isn't a tech person, tried it and approved. 🙂
+I'm not a programmer. I worked with Claude, an AI helper from Anthropic, to create a straightforward, user-friendly utility for my own Android TV because I couldn't find one. I outlined my requirements, Claude wrote the code, and I tested it on my TV until it worked as expected. It's a vibe-coded project, to put it briefly. Despite not being tech savvy, my wife tested it and gave it her approval. 🙂
 
 Because an AI wrote the code, here is what I can tell you honestly: the full source is public, it has automated tests, and it has been used on a real TV. It is also a young project. If something doesn't work, please [tell me](../../issues) and I'll fix it.
 
