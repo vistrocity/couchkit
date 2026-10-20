@@ -58,12 +58,19 @@
 
 ## Get started
 
-1. **Download it.** Open the **[Releases page](../../releases/latest)** and download the file for your computer:
-   - **Windows:** `Couchkit-Setup-….exe`. Run it. Prefer no install? Get `Couchkit-…-portable.exe` (one file, just double-click) or `Couchkit-…-win.zip` (unzip anywhere, run `Couchkit.exe`). Couchkit isn't code-signed yet, so Windows may say "unknown publisher": press **More info**, then **Run anyway**.
-   - **Linux (Debian, Ubuntu, Mint):** `couchkit_….deb`. Double-click it, or run `sudo apt install ./couchkit_*.deb`.
-   - **Linux (other):** `Couchkit-….AppImage`. Allow it to run (right-click > Properties > Allow executing, or `chmod +x`), then double-click it. Some newer Ubuntu versions also need `sudo apt install libfuse2`.
+1. **Download it.** Open the **[Releases page](../../releases/latest)** and pick the file for your computer:
 
-   The Linux version is a **beta**: it was tested in a simulated setup but not yet on many real Linux desktops. If something doesn't work, please [tell me](../../issues).
+   | Your computer | Download | How to use it |
+   | --- | --- | --- |
+   | **Windows** | `Couchkit-Setup-….exe` | Double-click and follow the steps. |
+   | **Windows, no install** | `Couchkit-…-portable.exe` or `Couchkit-…-win.zip` | Portable: just double-click. Zip: unzip anywhere, then run `Couchkit.exe`. |
+   | **Linux** (Ubuntu, Debian, Mint) | `couchkit_….deb` | Double-click it, or run `sudo apt install ./couchkit_*.deb`. |
+   | **Linux** (other) | `Couchkit-….AppImage` | Allow it to run (right-click > Properties > Allow executing), then double-click. Newer Ubuntu may also need `sudo apt install libfuse2`. |
+
+   **Windows may warn "unknown publisher".** Couchkit isn't code-signed yet (that costs money a free project doesn't have). Press **More info**, then **Run anyway**.
+
+   **Linux is a beta.** It has been tested in a simulated setup but not yet on many real desktops. If something doesn't work, please [tell me](../../issues) with your distribution and version.
+
 2. **Get your TV ready** (once):
    - On the TV open **Settings > System > About** and tap **Build** seven times.
    - Open **Settings > System > Developer options** and turn on **USB debugging** (and **Wireless debugging** if you see it).
@@ -76,11 +83,9 @@ That's it. Everything is explained on screen as you go.
 
 ## Why Couchkit exists
 
-I'm not a programmer. I wanted a simple tool for my own Android TV, I couldn't find one that felt friendly, so I built it with an AI: **Claude, my sidekick**. I described what I wanted, Claude wrote the code, and I tested it on my own TV, again and again, until it worked the way a normal person would expect.
+I'm not a programmer. I wanted a simple, friendly tool for my own Android TV and couldn't find one, so I made it with Claude, an AI assistant from Anthropic. I described what I wanted, Claude wrote the code, and I tested it on my own TV again and again until it worked the way an ordinary person would expect. In short, it's a vibe-coded project. My wife, who isn't a tech person, tried it and approved. 🙂
 
-I've tried to make it easy enough for anyone. My wife, who isn't a tech person, tried it and approved. 🙂
-
-Because an AI wrote the code, I'm telling you plainly. The code is all here to read, it has automated tests, and it was checked on a real TV, but it's a young project. If something doesn't work, please [tell me](../../issues) and we'll fix it.
+Because an AI wrote the code, here is what I can tell you honestly: the full source is public, it has automated tests, and it has been used on a real TV. It is also a young project. If something doesn't work, please [tell me](../../issues) and I'll fix it.
 
 ## Safe by design
 
