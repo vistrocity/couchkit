@@ -379,6 +379,10 @@ export interface CouchkitApi {
   restoreApps(packageNames: string[]): Promise<BackupItemResult[]>
   onBackupProgress(listener: (progress: BackupProgress) => void): () => void
   revealBackups(): Promise<void>
+  /** The folder new backups are saved into. */
+  backupDestination(): Promise<string>
+  /** Lets the person choose where new backups are saved; null if they cancel. */
+  chooseBackupDestination(): Promise<string | null>
 }
 
 declare global {

@@ -25,6 +25,28 @@ export function parseApkPaths(output: string): string[] {
   return paths
 }
 
+/** Turns a file-system error code into plain words about a folder we could not use. */
+export function explainFolderError(code: string | undefined, folder: string): { message: string; fix: string } {
+  switch (code) {
+    case 'EPERM':
+    case 'EACCES':
+      return {
+        message: `Couchkit is not allowed to save into ${folder}.`,
+        fix: 'Press "Save to…" and choose another folder, for example one on your Desktop. Windows security (Controlled folder access) or a synced Documents folder can block it.'
+      }
+    case 'ENOSPC':
+      return { message: 'This computer has no free space left to save the apps.', fix: 'Free up some space, or press "Save to…" and choose a drive with more room.' }
+    case 'EROFS':
+      return { message: `The folder ${folder} is read-only.`, fix: 'Press "Save to…" and choose a folder you can write to.' }
+    case 'ENOENT':
+    case 'ENOTDIR':
+    case 'EEXIST':
+      return { message: `The folder ${folder} could not be created.`, fix: 'Press "Save to…" and choose another folder.' }
+    default:
+      return { message: `Couchkit could not save into ${folder}${code !== undefined ? ` (${code})` : ''}.`, fix: 'Press "Save to…" and choose another folder, then try again.' }
+  }
+}
+
 export function backupFolderName(stamp: string): string {
   return `Couchkit-backup-${stamp}`
 }

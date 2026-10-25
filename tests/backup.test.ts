@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { AdbClient } from '../src/main/adb/client'
-import { scanBackupFolder } from '../src/main/backup'
-import { backupFolderName, parseApkPaths } from '../src/shared/backup'
+import { describeSaveError, prepareBackupFolder, scanBackupFolder } from '../src/main/backup'
+import { backupFolderName, explainFolderError, parseApkPaths } from '../src/shared/backup'
 
 const fakeAdb = join(__dirname, 'fixtures', 'fake-adb.js')
 const serial = '192.168.0.105:5555'
@@ -78,5 +78,42 @@ describe('backup and restore through the fake TV', () => {
     const { client } = setup()
     expect((await client.clearAppCache(serial, 'com.example.one')).ok).toBe(true)
     expect((await client.clearAppCache(serial, 'bad name')).ok).toBe(false)
+  })
+})
+
+describe('backup save folder', () => {
+  it('creates a writable folder and leaves no test file behind', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ck-root-'))
+    const out = prepareBackupFolder(root, 'Couchkit-backup-1')
+    expect(out.ok).toBe(true)
+    if (out.ok) {
+      expect(existsSync(out.folder)).toBe(true)
+      expect(existsSync(join(out.folder, '.couchkit-write-test'))).toBe(false)
+    }
+  })
+  it('explains in plain words when the folder cannot be made', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ck-root-'))
+    const blocker = join(root, 'not-a-folder')
+    writeFileSync(blocker, 'x')
+    const out = prepareBackupFolder(blocker, 'Couchkit-backup-1')
+    expect(out.ok).toBe(false)
+    if (!out.ok) {
+      expect(out.message).toContain('could not be created')
+      expect(out.fix).toContain('Save to')
+    }
+  })
+  it('gives a clear message for permission, disk full and unknown errors', () => {
+    expect(explainFolderError('EPERM', 'C:\\Docs').fix).toContain('Controlled folder access')
+    expect(explainFolderError('EACCES', 'x').message).toContain('not allowed')
+    expect(explainFolderError('ENOSPC', 'x').message).toContain('no free space')
+    expect(explainFolderError('EWEIRD', 'x').message).toContain('EWEIRD')
+    expect(explainFolderError(undefined, 'x').fix).toContain('Save to')
+  })
+  it('never leaves a save error without a reason', () => {
+    const a = describeSaveError(Object.assign(new Error('boom'), { code: 'EPERM' }))
+    expect(a.message.length).toBeGreaterThan(10)
+    const b = describeSaveError(new Error('something odd'))
+    expect(b.message).toContain('something odd')
+    expect(describeSaveError('text only').message).toContain('text only')
   })
 })

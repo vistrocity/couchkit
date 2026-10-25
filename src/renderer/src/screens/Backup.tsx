@@ -21,7 +21,8 @@ function Results({ results }: { results: BackupItemResult[] }): JSX.Element {
         <ul className="plain">
           {failed.map((r) => (
             <li key={r.packageName} className="warn">
-              {r.packageName}: {r.message} {r.fix ?? ''}
+              {r.packageName !== '' ? `${r.packageName}: ` : ''}
+              {r.message} {r.fix ?? ''}
             </li>
           ))}
         </ul>
@@ -39,6 +40,7 @@ export function Backup({ connected, onGoToConnect }: Props): JSX.Element {
   const [progress, setProgress] = useState<BackupProgress | null>(null)
   const [backupDone, setBackupDone] = useState<{ folder: string | null; results: BackupItemResult[] } | null>(null)
 
+  const [destination, setDestination] = useState('')
   const [folder, setFolder] = useState<string | null>(null)
   const [saved, setSaved] = useState<BackupApp[]>([])
   const [restorePicked, setRestorePicked] = useState<Set<string>>(new Set())
@@ -59,6 +61,10 @@ export function Backup({ connected, onGoToConnect }: Props): JSX.Element {
   }, [connected, refresh])
 
   useEffect(() => window.couchkit.onBackupProgress(setProgress), [])
+
+  useEffect(() => {
+    void window.couchkit.backupDestination().then(setDestination)
+  }, [])
 
   const visible = useMemo(
     () => (apps ?? []).filter((a) => !sideloadedOnly || a.installedFrom !== 'Play Store'),
@@ -94,6 +100,11 @@ export function Backup({ connected, onGoToConnect }: Props): JSX.Element {
     setBackupDone(await window.couchkit.backupApps(chosen))
     setProgress(null)
     setBusy(null)
+  }
+
+  const chooseDestination = async (): Promise<void> => {
+    const picked = await window.couchkit.chooseBackupDestination()
+    if (picked !== null) setDestination(picked)
   }
 
   const chooseFolder = async (): Promise<void> => {
@@ -157,7 +168,11 @@ export function Backup({ connected, onGoToConnect }: Props): JSX.Element {
           ))}
         </ul>
         {apps !== null && visible.length === 0 && <p className="muted">No apps to show.</p>}
+        <p className="muted small">Saved to: {destination}</p>
         <div className="row">
+          <button type="button" disabled={busy !== null} onClick={() => void chooseDestination()}>
+            Save to…
+          </button>
           <button type="button" className="primary" disabled={busy !== null || chosen.length === 0} onClick={() => void runBackup()}>
             {busy === 'backup' ? `Saving… ${working}` : `Back up ${chosen.length} app${chosen.length === 1 ? '' : 's'}`}
           </button>

@@ -4,7 +4,7 @@ import { basename, isAbsolute, join } from 'node:path'
 import { checkAdb, findAdb } from './adb/adb'
 import { AdbClient, type RecordingHandle } from './adb/client'
 import { findTvs } from './discovery'
-import { scanBackupFolder } from './backup'
+import { describeSaveError, prepareBackupFolder, scanBackupFolder } from './backup'
 import { KnownPaths } from './known-paths'
 import { backupFolderName, type BackupItemResult, type BackupRunResult, type BackupScan } from '@shared/backup'
 import { isValidPackageName } from '@shared/remote'
@@ -732,21 +732,51 @@ export function registerIpc(): void {
 
   // ---- Backup and restore ----
 
-  const backupsRoot = (): string => join(app.getPath('documents'), 'Couchkit', 'Backups')
+  const defaultBackupsRoot = (): string => join(app.getPath('documents'), 'Couchkit', 'Backups')
+  /** Where new backups are saved: the Documents folder unless the person chose another place. */
+  let chosenBackupsRoot: string | null = null
+  const backupsRoot = (): string => chosenBackupsRoot ?? defaultBackupsRoot()
+  const safeMkdir = (dir: string): void => {
+    try {
+      mkdirSync(dir, { recursive: true })
+    } catch {
+      /* a folder we cannot create is reported where it matters, when saving */
+    }
+  }
   /** The folder the next restore may read: the one just made, or the one the person picked. */
   let backupFolder: string | null = null
+
+  ipcMain.handle('backup:destination', (): string => backupsRoot())
+
+  ipcMain.handle('backup:choose-destination', async (event): Promise<string | null> => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      title: 'Choose where to save backups',
+      defaultPath: existsSync(backupsRoot()) ? backupsRoot() : undefined,
+      properties: ['openDirectory', 'createDirectory'] as Array<'openDirectory' | 'createDirectory'>
+    }
+    const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
+    if (result.canceled || result.filePaths[0] === undefined) return null
+    chosenBackupsRoot = result.filePaths[0]
+    return chosenBackupsRoot
+  })
 
   ipcMain.handle('backup:run', async (event, packageNames: unknown): Promise<BackupRunResult> => {
     const list = Array.isArray(packageNames) ? packageNames.filter(isValidPackageName).slice(0, 500) : []
     const s = session()
     if (!('client' in s)) return { folder: null, results: [{ packageName: '', ok: false, message: s.ok ? '' : s.message, ...(s.ok ? {} : { fix: s.fix }) }] }
     if (list.length === 0) return { folder: null, results: [] }
-    const folder = join(backupsRoot(), backupFolderName(timeStamp(new Date())))
-    mkdirSync(folder, { recursive: true })
+    const prepared = prepareBackupFolder(backupsRoot(), backupFolderName(timeStamp(new Date())))
+    if (!prepared.ok) return { folder: null, results: [{ packageName: '', ok: false, message: prepared.message, fix: prepared.fix }] }
+    const folder = prepared.folder
     const results: BackupItemResult[] = []
     for (const [i, name] of list.entries()) {
       if (!event.sender.isDestroyed()) event.sender.send('backup:progress', { phase: 'backup', index: i + 1, total: list.length, name })
-      results.push(await s.client.pullApp(s.serial, name, folder))
+      try {
+        results.push(await s.client.pullApp(s.serial, name, folder))
+      } catch (error) {
+        results.push({ packageName: name, ok: false, ...describeSaveError(error) })
+      }
     }
     backupFolder = folder
     return { folder, results }
@@ -754,10 +784,10 @@ export function registerIpc(): void {
 
   ipcMain.handle('backup:pick', async (event): Promise<BackupScan | null> => {
     const window = BrowserWindow.fromWebContents(event.sender)
-    mkdirSync(backupsRoot(), { recursive: true })
+    safeMkdir(backupsRoot())
     const options = {
       title: 'Choose a Couchkit backup folder',
-      defaultPath: backupsRoot(),
+      defaultPath: existsSync(backupsRoot()) ? backupsRoot() : undefined,
       properties: ['openDirectory'] as Array<'openDirectory'>
     }
     const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options)
@@ -789,7 +819,7 @@ export function registerIpc(): void {
 
   ipcMain.handle('backup:reveal', (): void => {
     const target = backupFolder ?? backupsRoot()
-    mkdirSync(backupsRoot(), { recursive: true })
+    safeMkdir(backupsRoot())
     if (existsSync(target)) platform.revealInFolder(target)
   })
 

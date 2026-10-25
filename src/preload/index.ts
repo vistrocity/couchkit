@@ -110,7 +110,9 @@ const api: CouchkitApi = {
     ipcRenderer.on('backup:progress', handler)
     return () => ipcRenderer.removeListener('backup:progress', handler)
   },
-  revealBackups: () => ipcRenderer.invoke('backup:reveal')
+  revealBackups: () => ipcRenderer.invoke('backup:reveal'),
+  backupDestination: () => ipcRenderer.invoke('backup:destination'),
+  chooseBackupDestination: () => ipcRenderer.invoke('backup:choose-destination')
 }
 
 contextBridge.exposeInMainWorld('couchkit', api)
